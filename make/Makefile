@@ -2,7 +2,7 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
--include makefile.init
+-include ../makefile.init
 
 RM := rm -rf
 
@@ -23,9 +23,8 @@ ifneq ($(strip $(C_DEPS)),)
 endif
 endif
 
--include makefile.defs
-
-SRC_PATH = Drivers/CMSIS
+-include ../makefile.defs
+SRC_PATH = ../Drivers/CMSIS
 
 # Add inputs and outputs from these tool invocations to the build variables 
 
@@ -33,10 +32,10 @@ SRC_PATH = Drivers/CMSIS
 all: LishuiFOC_01.elf
 
 # Tool invocations
-LishuiFOC_01.elf: $(OBJS) $(USER_OBJS) STM32F103C6Tx_FLASH_Bootloader.ld
+LishuiFOC_01.elf: $(OBJS) $(USER_OBJS) ../STM32F103C6Tx_FLASH.ld
 	@echo 'Building target: $@'
 	@echo 'Invoking: MCU GCC Linker'
-	arm-none-eabi-gcc -mcpu=cortex-m3 -mthumb -mfloat-abi=soft -L $(SRC_PATH) -specs=nosys.specs -specs=nano.specs -T"STM32F103C6Tx_FLASH_Bootloader.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "build/EBiCS_Firmware.elf" @"objects.list" $(USER_OBJS) $(LIBS) -lm
+	arm-none-eabi-gcc -v -mcpu=cortex-m3 -mthumb -mfloat-abi=soft -L$(SRC_PATH) -specs=nosys.specs -specs=nano.specs -T"../STM32F103C6Tx_FLASH.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "LishuiFOC_01.elf" @"objects.list" $(USER_OBJS) $(LIBS) -lm
 	@echo 'Finished building target: $@'
 	@echo ' '
 	$(MAKE) --no-print-directory post-build
@@ -48,14 +47,13 @@ clean:
 
 post-build:
 	-@echo 'Generating hex and Printing size information:'
-	arm-none-eabi-objcopy -O ihex "build/EBiCS_Firmware.elf" "build/EBiCS_Firmware.hex"
-	arm-none-eabi-objcopy -O binary "build/EBiCS_Firmware.elf" "build/EBiCS_Firmware.bin"
-	arm-none-eabi-size "build/EBiCS_Firmware.elf"
-	stat "build/EBiCS_Firmware.bin"
+	arm-none-eabi-objcopy -O ihex "LishuiFOC_01.elf" "LishuiFOC_01.hex"
+	arm-none-eabi-objcopy -O binary "LishuiFOC_01.elf" "LishuiFOC_01.bin"
+	arm-none-eabi-size "LishuiFOC_01.elf"
+	stat "LishuiFOC_01.bin"
 	-@echo ' '
-
 
 .PHONY: all clean dependents
 .SECONDARY: post-build
 
--include makefile.targets
+-include ../makefile.targets

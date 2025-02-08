@@ -4,7 +4,7 @@
 		<cconfiguration id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.167643868">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.167643868" moduleId="org.eclipse.cdt.core.settings" name="Debug">
 				<macros>
-					<stringMacro name="CMSIS_LOC" type="VALUE_PATH_DIR" value="C:\CMSIS_5-develop\CMSIS_5-develop\CMSIS\"/>
+					<stringMacro name="CMSIS_LOC" type="VALUE_PATH_DIR" value="/home/tristan/dev/ebike/firmware-lushui/Drivers/CMSIS/"/>
 				</macros>
 				<externalSettings/>
 				<extensions>
@@ -27,7 +27,7 @@
 							<option id="fr.ac6.managedbuild.option.gnu.cross.fpu.2071860671" name="Floating point hardware" superClass="fr.ac6.managedbuild.option.gnu.cross.fpu" useByScannerDiscovery="false" value="fr.ac6.managedbuild.option.gnu.cross.fpu.no" valueType="enumerated"/>
 							<option id="fr.ac6.managedbuild.option.gnu.cross.floatabi.1781991771" name="Floating-point ABI" superClass="fr.ac6.managedbuild.option.gnu.cross.floatabi" useByScannerDiscovery="false" value="fr.ac6.managedbuild.option.gnu.cross.floatabi.soft" valueType="enumerated"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="fr.ac6.managedbuild.targetPlatform.gnu.cross.904965366" isAbstract="false" osList="all" superClass="fr.ac6.managedbuild.targetPlatform.gnu.cross"/>
-							<builder buildPath="${workspace_loc:/LishuiFOC_01}/Debug" id="fr.ac6.managedbuild.builder.gnu.cross.1342423751" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="fr.ac6.managedbuild.builder.gnu.cross">
+							<builder arguments="" buildPath="${workspace_loc:/LishuiFOC_01}/Debug" command="make" id="fr.ac6.managedbuild.builder.gnu.cross.1342423751" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="fr.ac6.managedbuild.builder.gnu.cross">
 								<outputEntries>
 									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="Debug"/>
 								</outputEntries>
@@ -234,7 +234,7 @@
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
 		<configuration configurationName="Debug">
-			<resource resourceType="PROJECT" workspacePath="LishuiFOC_01"/>
+			<resource resourceType="PROJECT" workspacePath="/LishuiFOC_01"/>
 		</configuration>
 		<configuration configurationName="Release"/>
 	</storageModule>
@@ -245,4 +245,5 @@
 			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>
