@@ -78,8 +78,8 @@
 #define BRAKE_LIGHT_GPIO_Port GPIOB
 #define PAS_Pin GPIO_PIN_8
 #define PAS_GPIO_Port GPIOB
-#define Brake_Pin GPIO_PIN_15  // put a 15 here for new generation controllers!
-#define Brake_GPIO_Port GPIOA
+#define Brake_Pin GPIO_PIN_15 //15  // put a 15 here for new generation controllers!
+#define Brake_GPIO_Port GPIOA //A
 #define Speed_EXTI5_Pin GPIO_PIN_5
 #define Speed_EXTI5_GPIO_Port GPIOB
 #define Speed_EXTI5_EXTI_IRQn EXTI9_5_IRQn
@@ -103,6 +103,8 @@
 #define HALL_26 1486692096
 #define HALL_64 2425737984
 
+/* Note: might be unsafe but KT controller use high as brake so option to change  */
+//#define INVERT_BRAKE_SIGNAL
 
 /* ########################## Assert Selection ############################## */
 /**
@@ -113,6 +115,12 @@
 
 /* USER CODE BEGIN Private defines */
 
+
+#ifdef INVERT_BRAKE_SIGNAL
+#define BRAKE_SIGNAL
+#else
+#define BRAKE_SIGNAL !
+#endif
 
 
 
@@ -170,6 +178,7 @@ typedef struct
 	int8_t         	error_state;
 	int8_t 			angle_est;
 	int16_t 		KV_detect_flag;
+    uint32_t        throttle_value;
 
 }MotorState_t;
 

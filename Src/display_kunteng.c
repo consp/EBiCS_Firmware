@@ -9,7 +9,7 @@
 #include "display_kunteng.h"
 #include "stm32f1xx_hal.h"
 #include "eeprom.h"
-extern volatile uint32_t adcData[9];
+
 static uint8_t ui8_tx_buffer[12];
 uint8_t ui8_j;
 uint8_t ui8_crc;
@@ -90,26 +90,22 @@ void display_update(MotorState_t* MS_U)
 
    // prepare moving indication info
   ui8_moving_indication = 0;
-  if (BRAKE_SIGNAL HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin)) { ui8_moving_indication |= (1 << 5); }
+if (!HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin)) { ui8_moving_indication |= (1 << 5); }
   //if (ebike_app_cruise_control_is_set ()) { ui8_moving_indication |= (1 << 3); }
   if (throttle_is_set ()) { ui8_moving_indication |= (1 << 1); }
-  /* if (pas_is_set ()) { ui8_moving_indication |= (1 << 4); } */
+  //if (pas_is_set ()) { ui8_moving_indication |= (1 << 4); }
 
 
   // calc battery pack state of charge (SOC)
-  // voltage is 0.025v per mv on ADC for LW17xx
-  ui32_battery_volts =  (MS_U->Voltage*25);
-  /* ui32_battery_volts =  (MS_U->Voltage*CAL_BAT_V*256)/10000;  //hier noch die richtige Kalibrierung einbauen (*256 für bessere Auflösung) */
+  ui32_battery_volts =  (MS_U->Voltage*CAL_BAT_V*256)/10000;  //hier noch die richtige Kalibrierung einbauen (*256 für bessere Auflösung)
   if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_80)) { ui8_battery_soc = 16; } // 4 bars | full
   else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_60)) { ui8_battery_soc = 12; } // 3 bars
   else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_40)) { ui8_battery_soc = 8; } // 2 bars
   else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_20)) { ui8_battery_soc = 4; } // 1 bar
   else { ui8_battery_soc = 3; } // empty
-#if SPEEDSOURCE == EXTERNAL
-  ui16_wheel_period_ms = (MS_U->Speed*PULSES_PER_REVOLUTION)>>3; //for External speedsensor
-#else
-  ui16_wheel_period_ms= (MS_U->Speed*6*((uint16_t)ui8_gear_ratio/2))/500; // use only constants
-#endif
+  //ui16_wheel_period_ms = (MS_U->Speed*PULSES_PER_REVOLUTION)>>3; //for External speedsensor
+  ui16_wheel_period_ms= ((MS_U->Speed)*6*(ui8_gear_ratio/2)/500);
+  //ui16_wheel_period_ms= ((MS_U->Speed)*6*GEAR_RATIO/500); //*6 because 6 hall interrupts per revolution, /500 because of 500 kHz timer setting
   ui8_tx_buffer [0] =  65;
   // B1: battery level
   ui8_tx_buffer [1] = ui8_battery_soc;
@@ -138,11 +134,9 @@ void display_update(MotorState_t* MS_U)
 
 
   //ui8_tx_buffer [8] =  (uint8_t)(((ui16_BatteryCurrent-ui16_current_cal_b+1)<<2)/current_cal_a);
-  /* ui8_tx_buffer [8] =  (uint8_t)(MS_U->Battery_Current*MS_U->Voltage*CAL_BAT_V/82010000);   //Kalibrierung nach Binatone, empririsch ermittelt. Strom und Spannung in Milli, 13W pro digit */
-  ui8_tx_buffer [8] = MS_U->Battery_Current / 250;
+  ui8_tx_buffer [8] =  (uint8_t)(MS_U->Battery_Current*MS_U->Voltage*CAL_BAT_V/82010000);   //Kalibrierung nach Binatone, empririsch ermittelt. Strom und Spannung in Milli, 13W pro digit
   // B9: motor temperature
   ui8_tx_buffer [9] = MS_U->Temperature-15; //according to documentation at endless sphere	
-  ui8_tx_buffer [9] = ((MS_U->throttle_value>>5) & 0xFF) - 15;
   // B10 and B11: 0
   ui8_tx_buffer [10] = 0;
   ui8_tx_buffer [11] = 0;
@@ -176,14 +170,12 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
      ui8_crc ^= ui8_rx_buffer[ui8_j];
    }
 
-   HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
    // check if end of message is OK
-   if((ui8_rx_buffer[11]==0x32||ui8_rx_buffer[11]==0x37 || ui8_rx_buffer[11] == 0xbc) && ui8_rx_buffer[12]==0x0E ){
+   if((ui8_rx_buffer[11]==0x32||ui8_rx_buffer[11]==0x37) && ui8_rx_buffer[12]==0x0E ){
 	   // check if CRC is ok
-   if (((ui8_crc ^ 10) == ui8_rx_buffer [5] || (ui8_crc ^ 27) == ui8_rx_buffer[5]) 	|| // some versions of CRC LCD5 (??)
+   if (((ui8_crc ^ 10) == ui8_rx_buffer [5]) 	|| // some versions of CRC LCD5 (??)
 	((ui8_crc ^ ui8_last_XOR) == ui8_rx_buffer [5])
 	)
-   /* if (1)  */
    { //printf("message valid \r\n");
      lcd_configuration_variables.ui8_assist_level = ui8_rx_buffer [1] & 7;
      lcd_configuration_variables.ui8_light = ui8_rx_buffer [1]>>7 & 1;
@@ -195,24 +187,22 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
      MS_D->assist_level = lcd_configuration_variables.ui8_assist_level;
      MP_D->speedLimit = lcd_configuration_variables.ui8_max_speed;
 
-    lcd_configuration_variables.ui8_p1 = ui8_rx_buffer[3];
-    lcd_configuration_variables.ui8_p2 = ui8_rx_buffer[4] & 0x07;
-    lcd_configuration_variables.ui8_p3 = ui8_rx_buffer[4] & 0x08;
-    lcd_configuration_variables.ui8_p4 = ui8_rx_buffer[4] & 0x10;
-    lcd_configuration_variables.ui8_p5 = ui8_rx_buffer[0];
+		lcd_configuration_variables.ui8_p1 = ui8_rx_buffer[3];
+		lcd_configuration_variables.ui8_p2 = ui8_rx_buffer[4] & 0x07;
+		lcd_configuration_variables.ui8_p3 = ui8_rx_buffer[4] & 0x08;
+		lcd_configuration_variables.ui8_p4 = ui8_rx_buffer[4] & 0x10;
+		lcd_configuration_variables.ui8_p5 = ui8_rx_buffer[0];
 
-    lcd_configuration_variables.ui8_c1 = (ui8_rx_buffer[6] & 0x38) >> 3;
-    lcd_configuration_variables.ui8_c2 = (ui8_rx_buffer[6] & 0x37);
-    lcd_configuration_variables.ui8_c4 = (ui8_rx_buffer[8] & 0xE0) >> 5;
-    lcd_configuration_variables.ui8_c5 = (ui8_rx_buffer[7] & 0x0F);
-    lcd_configuration_variables.ui8_c12 = (ui8_rx_buffer[9] & 0x0F);
-    lcd_configuration_variables.ui8_c13 = (ui8_rx_buffer[10] & 0x1C) >> 2;
-    lcd_configuration_variables.ui8_c14 = (ui8_rx_buffer[7] & 0x60) >> 5;
-    if(lcd_configuration_variables.ui8_p1 != ui8_gear_ratio){
-        ui8_gear_ratio=lcd_configuration_variables.ui8_p1;
-    }
-
-
+		lcd_configuration_variables.ui8_c1 = (ui8_rx_buffer[6] & 0x38) >> 3;
+		lcd_configuration_variables.ui8_c2 = (ui8_rx_buffer[6] & 0x37);
+		lcd_configuration_variables.ui8_c4 = (ui8_rx_buffer[8] & 0xE0) >> 5;
+		lcd_configuration_variables.ui8_c5 = (ui8_rx_buffer[7] & 0x0F);
+		lcd_configuration_variables.ui8_c12 = (ui8_rx_buffer[9] & 0x0F);
+		lcd_configuration_variables.ui8_c13 = (ui8_rx_buffer[10] & 0x1C) >> 2;
+		lcd_configuration_variables.ui8_c14 = (ui8_rx_buffer[7] & 0x60) >> 5;
+		if(lcd_configuration_variables.ui8_p1 != ui8_gear_ratio){
+				    	 ui8_gear_ratio=lcd_configuration_variables.ui8_p1;
+				     }
 
      if(lcd_configuration_variables.ui8_light){
     	 HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);

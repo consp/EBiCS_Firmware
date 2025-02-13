@@ -192,7 +192,7 @@ $(BUILD_DIR):
 	mkdir $@	
 
 flash: $(BUILD_DIR)/$(TARGET).bin
-	st-flash --reset write build/EBiCS_Firmware.bin 0x8000000
+		st-flash --reset write build/EBiCS_Firmware.bin 0x8000000
 	
 #######################################
 # clean up

@@ -25,8 +25,9 @@
 // Calibration values
 #define CAL_BAT_V 256
 #define CAL_V 15LL<<8
-#define CAL_I 38LL<<8
-// #define CAL_I 106LL<<8
+// #define CAL_I 13LL<<8
+// #define CAL_I 38LL<<8
+#define CAL_I 106LL<<8
 
 #define INDUCTANCE 6
 #define RESISTANCE 40
@@ -56,7 +57,9 @@
 #define I_FACTOR_SPEED 10
 
 #define SPEEDFILTER 1
+#define LIMIT_SPEED_WITHOUT_LEGAL_FLAG
 #define SIXSTEPTHRESHOLD 3500
+// #define SIXSTEPTHRESHOLD 4000
 #define TS_COEF 60000
 // pas
 #define PAS_TIMEOUT 4000
@@ -64,8 +67,8 @@
 #define FRAC_HIGH 30
 #define FRAC_LOW 15
 // throttle
-#define THROTTLE_OFFSET 750
-#define THROTTLE_MAX 2600
+#define THROTTLE_OFFSET 1250
+#define THROTTLE_MAX 3000
 // push assist
 #define PUSHASSIST_CURRENT 65
 
@@ -77,21 +80,23 @@
 #define SPEEDLIMIT 30
 #define PULSES_PER_REVOLUTION 1
 // max phase current
-#define PH_CURRENT_MAX 300
-#define BATTERYCURRENT_MAX 1200
-#define REGEN_CURRENT 200
+#define PH_CURRENT_MAX 1200
+#define BATTERYCURRENT_MAX 12000
+#define REGEN_CURRENT 4000
 #define REGEN_CURRENT_MAX 10000
 // voltage, see cal
 #define VOLTAGE_MIN 820
-#define VOLTAGE_MAX 1140
+#define VOLTAGE_MAX 1160
 //
 #define SPEC_ANGLE -715827882
-#define DISPLAY_TYPE DISPLAY_TYPE_DEBUG //ASCII Printout for debugging
+// #define DISPLAY_TYPE DISPLAY_TYPE_DEBUG //ASCII Printout for debugging
 // #define DISPLAY_TYPE DISPLAY_TYPE_KINGMETER_901U
+// #define DISPLAY_TYPE DISPLAY_TYPE_KINGMETER_618U
+#define DISPLAY_TYPE DISPLAY_TYPE_KUNTENG
 // #define DISPLAY_TYPE DISPLAY_TYPE_BAFANG
 #define SPEED_PLL 0 // not needed
 #define SPEEDSOURCE INTERNAL
-#define AUTODETECT 1
+#define AUTODETECT 0
 #define REVERSE 1
 #define THROTTLE_OVERRIDE
 
