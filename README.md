@@ -1,6 +1,18 @@
 This project has now reached a certain maturity, use is always at your own risk. The authors do not accept any liability for damage to property or personal injury!  
 The Master-branch supports sensored motors and Bafang-, Kunteng- and Kingmeter-Displays and debugging.
 
+## Changes
+
+This repository is solely ment as a proof of concept for using a Spart ION XGS engine with the Lishui controllers. Use at you own peril.
+
+Changes include:
+* 100k NTC motor temperature measurement
+* Some modifications to allow the user to use the KT display settings to configure the device (WIP)
+* Settings specific for this engine/LSW1728 controller configuration.
+* Remade directory structure to allow more easy linux development, this branch is NOT mergable with the remote EBiCS master and this is by design.
+
+## Original Readme
+
 User specific settings can be done in a user-friendly gui.
 
 throttle, "torque-simulation" and torquesensor-modes are available.
