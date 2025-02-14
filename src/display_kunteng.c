@@ -11,6 +11,7 @@
 #include "eeprom.h"
 extern volatile uint32_t adcData[9];
 static uint8_t ui8_tx_buffer[12];
+extern int8_t i8_reverse_flag;
 uint8_t ui8_j;
 uint8_t ui8_crc;
 uint8_t ui8_last_XOR;
@@ -28,8 +29,8 @@ uint8_t ui8_msg_received=0;
 int16_t i16_eeprom_temp=0;
 uint8_t ui8_gear_ratio = GEAR_RATIO;
 
-LCD8_display_data *displaydata = ui8_rx_buffer;
-LCD8_controller_data *controllerdata = ui8_tx_buffer;
+LCD8_display_data *displaydata = (LCD8_display_data *) ui8_rx_buffer;
+LCD8_controller_data *controllerdata = (LCD8_controller_data *) ui8_tx_buffer;
 
 volatile struc_lcd_configuration_variables lcd_configuration_variables;
 
@@ -196,7 +197,6 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
      ui8_crc ^= ui8_rx_buffer[ui8_j];
    }
 
-   HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
    // check if end of message is OK
    if(ui8_rx_buffer[12]==0x0E){ // B11 is configurable via L1 and C4, not a good way to check that, C4 only in case the screen has the percentage option
 	   // check if CRC is ok
@@ -231,6 +231,12 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
         ui8_gear_ratio=lcd_configuration_variables.ui8_p1;
     }
 
+#ifdef ALLOW_DYNAMIC_CURRENT
+    MS_D->battery_max_current = displaydata->p5 * 1000; // convert to milliamps
+#endif
+#ifdef ALLOW_DYNAMIC_REVERSE
+    i8_reverse_flag = displaydata->c2 == 1 ? -1 : 1;
+#endif
 
 
      if(lcd_configuration_variables.ui8_light){
@@ -266,7 +272,7 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
 		   DMA1_Channel5->CNDTR=2;
 		   SET_BIT(DMA1_Channel5->CCR, DMA_CCR_EN);
 
-		   if((ui8_rx_buffer[0]==0x32||ui8_rx_buffer[0]==0x37) && ui8_rx_buffer[1]==0x0E ){
+		   if(ui8_rx_buffer[1]==0x0E ) { // values before 0x0e are unreliable as they are configurable on newer displays
 	  	   CLEAR_BIT(DMA1_Channel5->CCR, DMA_CCR_EN);
 	  	   DMA1_Channel5->CNDTR=13;
 	  	   SET_BIT(DMA1_Channel5->CCR, DMA_CCR_EN);
