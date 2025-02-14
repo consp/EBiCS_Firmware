@@ -133,6 +133,7 @@ extern uint16_t switchtime[3];
 extern uint32_t ui32_tim1_counter;
 extern uint32_t uint32_PAS_counter;
 extern uint8_t throttle_is_set(void);
+extern uint8_t pas_is_set(void);
 extern void UART_IdleItCallback(void);
 extern void get_internal_temp_offset(void);
 
@@ -179,6 +180,7 @@ typedef struct
 	int8_t 			angle_est;
 	int16_t 		KV_detect_flag;
     uint32_t        throttle_value;
+    int8_t          direction;
 
 }MotorState_t;
 

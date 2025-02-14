@@ -28,6 +28,9 @@ uint8_t ui8_msg_received=0;
 int16_t i16_eeprom_temp=0;
 uint8_t ui8_gear_ratio = GEAR_RATIO;
 
+LCD8_display_data *displaydata = ui8_rx_buffer;
+LCD8_controller_data *controllerdata = ui8_tx_buffer;
+
 volatile struc_lcd_configuration_variables lcd_configuration_variables;
 
 extern UART_HandleTypeDef huart1;
@@ -80,7 +83,7 @@ void kunteng_init()
     }
     ui8_crc ^=10; //right XOR must be pasted here!!!
     ui8_rx_buffer [5]=ui8_crc;
-    ui8_rx_buffer[11]=0x37;
+    displaydata->B12=0x37;
     ui8_rx_buffer[12]=0x0E;
 
 }
@@ -90,7 +93,6 @@ void display_update(MotorState_t* MS_U)
 
    // prepare moving indication info
   ui8_moving_indication = 0;
-  if (BRAKE_SIGNAL HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin)) { ui8_moving_indication |= (1 << 5); }
   //if (ebike_app_cruise_control_is_set ()) { ui8_moving_indication |= (1 << 3); }
   if (throttle_is_set ()) { ui8_moving_indication |= (1 << 1); }
   /* if (pas_is_set ()) { ui8_moving_indication |= (1 << 4); } */
@@ -99,36 +101,55 @@ void display_update(MotorState_t* MS_U)
   // calc battery pack state of charge (SOC)
   // voltage is 0.025v per mv on ADC for LW17xx
   ui32_battery_volts =  (MS_U->Voltage*25);
-  /* ui32_battery_volts =  (MS_U->Voltage*CAL_BAT_V*256)/10000;  //hier noch die richtige Kalibrierung einbauen (*256 für bessere Auflösung) */
-  if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_80)) { ui8_battery_soc = 16; } // 4 bars | full
-  else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_60)) { ui8_battery_soc = 12; } // 3 bars
-  else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_40)) { ui8_battery_soc = 8; } // 2 bars
-  else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_20)) { ui8_battery_soc = 4; } // 1 bar
-  else { ui8_battery_soc = 3; } // empty
+  if (ui32_battery_volts >= (BATTERY_PACK_VOLTS_100)) {
+      controllerdata->charging_status = 2; // 2 = Charging indicator
+      controllerdata->bars = 0;
+  } else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_80)) { 
+      controllerdata->charging_status = 2; // 0 = normal indicator
+      controllerdata->bars = 4;
+  } else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_60)) { 
+      controllerdata->charging_status = 0; // 0 = normal indicator
+      controllerdata->bars = 3;
+  } // 3 bars
+  else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_40)) { 
+      controllerdata->charging_status = 0; // 0 = normal indicator
+      controllerdata->bars = 2;
+  } // 2 bars
+  else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_20)) {
+      controllerdata->charging_status = 0; // 0 = normal indicator
+      controllerdata->bars = 1;
+  } // 1 bar
+  else if (ui32_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_0)) {
+      controllerdata->charging_status = 0; // 0 = normal 
+      controllerdata->bars = 0;
+  } else { 
+      controllerdata->charging_status = 1; // 1 = flashing
+      controllerdata->bars = 0;
+  }
 #if SPEEDSOURCE == EXTERNAL
   ui16_wheel_period_ms = (MS_U->Speed*PULSES_PER_REVOLUTION)>>3; //for External speedsensor
 #else
-  ui16_wheel_period_ms= (MS_U->Speed*6*((uint16_t)ui8_gear_ratio/2))/500; // use only constants
+  ui16_wheel_period_ms= (MS_U->Speed*6*((uint16_t)ui8_gear_ratio/2))/500;
 #endif
   ui8_tx_buffer [0] =  65;
   // B1: battery level
-  ui8_tx_buffer [1] = ui8_battery_soc;
   // B2: 24V controller
-  ui8_tx_buffer [2] = (uint8_t) COMMUNICATIONS_BATTERY_VOLTAGE;
+  controllerdata->nominal_voltage = (uint8_t) COMMUNICATIONS_BATTERY_VOLTAGE;
+  controllerdata->reverse = MS_U->direction == -1 ? 1 : 0;
   // B3: speed, wheel rotation period, ms; period(ms)=B3*256+B4;
-  ui8_tx_buffer [3] = (ui16_wheel_period_ms >> 8) & 0xff;
-  ui8_tx_buffer [4] = (ui16_wheel_period_ms) & 0xff;
-
-
+  controllerdata->rotation = (ui16_wheel_period_ms >> 8) | (ui16_wheel_period_ms << 8);
 
   // B5: error info display
-  ui8_tx_buffer [5] = ui16_error;
+  controllerdata->error = ui16_error;
   // B6: CRC: xor B1,B2,B3,B4,B5,B7,B8,B9,B10,B11
   // 0 value so no effect on xor operation for now
-  ui8_tx_buffer [6] = 0;
+  controllerdata->crc = 0;
   // B7: moving mode indication, bit
-  // throttle: 2
-  ui8_tx_buffer [7] = ui8_moving_indication;
+  //
+  controllerdata->mode_brake = BRAKE_SIGNAL HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin);
+  controllerdata->mode_throttle = throttle_is_set();
+  controllerdata->mode_assist = pas_is_set();
+
   // B8: 4x controller current
   // Vbat = 30V:
   // - B8 = 255, LCD shows 1912 watts
@@ -139,10 +160,9 @@ void display_update(MotorState_t* MS_U)
 
   //ui8_tx_buffer [8] =  (uint8_t)(((ui16_BatteryCurrent-ui16_current_cal_b+1)<<2)/current_cal_a);
   /* ui8_tx_buffer [8] =  (uint8_t)(MS_U->Battery_Current*MS_U->Voltage*CAL_BAT_V/82010000);   //Kalibrierung nach Binatone, empririsch ermittelt. Strom und Spannung in Milli, 13W pro digit */
-  ui8_tx_buffer [8] = MS_U->Battery_Current / 250;
+  controllerdata->amps = MS_U->Battery_Current / 250;
   // B9: motor temperature
-  ui8_tx_buffer [9] = MS_U->Temperature-15; //according to documentation at endless sphere	
-  ui8_tx_buffer [9] = ((MS_U->throttle_value>>5) & 0xFF) - 15;
+  controllerdata->motor_temperature = MS_U->Temperature-15; //according to documentation at endless sphere	
   // B10 and B11: 0
   ui8_tx_buffer [10] = 0;
   ui8_tx_buffer [11] = 0;
@@ -178,13 +198,12 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
 
    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
    // check if end of message is OK
-   if((ui8_rx_buffer[11]==0x32||ui8_rx_buffer[11]==0x37 || ui8_rx_buffer[11] == 0xbc) && ui8_rx_buffer[12]==0x0E ){
+   if(ui8_rx_buffer[12]==0x0E){ // B11 is configurable via L1 and C4, not a good way to check that, C4 only in case the screen has the percentage option
 	   // check if CRC is ok
    if (((ui8_crc ^ 10) == ui8_rx_buffer [5] || (ui8_crc ^ 27) == ui8_rx_buffer[5]) 	|| // some versions of CRC LCD5 (??)
 	((ui8_crc ^ ui8_last_XOR) == ui8_rx_buffer [5])
 	)
-   /* if (1)  */
-   { //printf("message valid \r\n");
+   { 
      lcd_configuration_variables.ui8_assist_level = ui8_rx_buffer [1] & 7;
      lcd_configuration_variables.ui8_light = ui8_rx_buffer [1]>>7 & 1;
      lcd_configuration_variables.ui8_motor_characteristic = ui8_rx_buffer [3];
