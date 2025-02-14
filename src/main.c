@@ -747,7 +747,6 @@ int main(void)
 				if(ui16_throttle>ui16_throttle_offset)uint32_torque_cumulated += (ui16_throttle-ui16_throttle_offset);
 #endif
 
-
 			}
 		}
 
@@ -1029,6 +1028,7 @@ int main(void)
 				__HAL_TIM_SET_COUNTER(&htim2,0); //reset tim2 counter
 				ui16_timertics=20000; //set interval between two hallevents to a large value
 				i8_recent_rotor_direction=i8_direction*i8_reverse_flag*sign(MS.i_q_setpoint);
+                MS.direction = i8_recent_rotor_direction;
 				get_standstill_position();
 			}
 
@@ -2349,6 +2349,9 @@ int main(void)
 		}
 		else return 0;
 	}
+    uint8_t pas_is_set(void) {
+        return uint32_PAS != 32000;
+    }
 	void autodetect() {
 		SET_BIT(TIM1->BDTR, TIM_BDTR_MOE);
 		MS.hall_angle_detect_flag = 0; //set uq to contstant value in FOC.c for open loop control
@@ -2673,9 +2676,10 @@ const uint16_t NTC_table[513] = {
   18, 16, 14, 11, 9, 5, 2, -2, -8, -15, -26, 
   -37
 };
- 
- 
- 
+#define ADC_TEMP_WINDOW 16
+ssize_t motor_temperature_window_index = 0;
+int16_t motor_temperature_window[ADC_TEMP_WINDOW] = {25}; // fill with 25c, stabalizes after ADC_TEMP_WINDOW/ticktime seconds (default 8)
+
 /**
 * \brief    Converts the ADC result into a temperature value.
 *
@@ -2688,19 +2692,23 @@ const uint16_t NTC_table[513] = {
 *           In the temperature range from -10°C to 150°C the error
 *           caused by the usage of a table is 1.312°C
 *
+*           Code acquired from https://www.sebulli.com/ntc/
+*
 * \param    adc_value  The converted ADC result
 * \return              The temperature in 1 °C
 *
 */
 
-    int16_t T_NTC(uint16_t adc_value) {// ADC 12 Bit, 10k Pullup, Rückgabewert in °C
-    int16_t p1,p2;
-    /* Estimate the interpolating point before and after the ADC value. */
-    p1 = NTC_table[ (adc_value >> 3)  ];
-    p2 = NTC_table[ (adc_value >> 3)+1];
-    
-    /* Interpolate between both points. */
-    return p1 - ( (p1-p2) * (adc_value & 0x0007) ) / 8;
+    int16_t T_NTC(uint16_t adc_value) {
+        int16_t p1,p2;
+        p1 = NTC_table[ (adc_value >> 3)  ];
+        p2 = NTC_table[ (adc_value >> 3)+1];
+        motor_temperature_window[motor_temperature_window_index++] = p1 - ( (p1-p2) * (adc_value & 0x0007) ) / 8;
+        motor_temperature_window_index = motor_temperature_window_index % (ADC_TEMP_WINDOW-1);
+        int32_t sum = 0;
+        for (int i = 0; i < ADC_TEMP_WINDOW; i++) sum += motor_temperature_window[i];
+        // perform sliding window since 100k is a bit narrow (~2-3.3v) so wel need somewhat more stabilization
+        return (int16_t) ((int32_t)sum / (int32_t)ADC_TEMP_WINDOW);
     };
 #endif
 
