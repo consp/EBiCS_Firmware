@@ -208,7 +208,11 @@ adcStruct *adc = (adcStruct *) &adcData;
 q31_t tic_array[6];
 
 //Rotor angle scaled from degree to q31 for arm_math. -180Â°-->-2^31, 0Â°-->0, +180Â°-->+2^31
+#ifdef DYNAMIC_30_DEG
+volatile q31_t deg_30 = 357913941;
+#else
 const q31_t deg_30 = 357913941;
+#endif
 
 q31_t Hall_13 = 0;
 q31_t Hall_32 = 0;
@@ -907,8 +911,9 @@ int main(void)
 
 #ifndef TS_MODE //normal PAS Mode
 
-				if (uint32_PAS_counter < PAS_TIMEOUT) int32_temp_current_target = uint16_mapped_PAS;		//set current target in torque-simulation-mode, if pedals are turning
-				else  {
+				if (uint32_PAS_counter < PAS_TIMEOUT) {
+                    int32_temp_current_target = uint16_mapped_PAS;		//set current target in torque-simulation-mode, if pedals are turning
+                } else  {
 					int32_temp_current_target= 0;//pedals are not turning, stop motor
 					uint32_PAS_cumulated=32000;
 					uint32_PAS=32000;
@@ -1082,8 +1087,12 @@ int main(void)
 					}
 
 				}
-				else if(ui8_6step_flag) SystemState = SixStep;
-				else SystemState = Running;
+				else if(ui8_6step_flag) {
+                    SystemState = SixStep;
+                }
+				else {
+                    SystemState = Running;
+                }
 
 #if (DISPLAY_TYPE == DISPLAY_TYPE_DEBUG && !defined(FAST_LOOP_LOG))
 				//print values for debugging
@@ -1899,36 +1908,50 @@ int main(void)
 		switch (ui8_hall_case) //12 cases for each transition from one stage to the next. 6x forward, 6x reverse
 		{
 		//6 cases for forward direction
-		//6 cases for forward direction
 		case 64:
 			q31_rotorposition_hall = Hall_64;
-
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_45 - Hall_64;
+#endif
 			i8_recent_rotor_direction = -i16_hall_order;
 			uint16_full_rotation_counter = 0;
 			break;
 		case 45:
 			q31_rotorposition_hall = Hall_45;
-
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_51 - Hall_45;
+#endif
 			i8_recent_rotor_direction = -i16_hall_order;
 			break;
 		case 51:
 			q31_rotorposition_hall = Hall_51;
-
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_13 - Hall_51;
+#endif
 			i8_recent_rotor_direction = -i16_hall_order;
 			break;
 		case 13:
 			q31_rotorposition_hall = Hall_13;
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_32 - Hall_13;
+#endif
 
 			i8_recent_rotor_direction = -i16_hall_order;
 			uint16_half_rotation_counter = 0;
 			break;
 		case 32:
 			q31_rotorposition_hall = Hall_32;
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_26 - Hall_32;
+#endif
 
 			i8_recent_rotor_direction = -i16_hall_order;
 			break;
 		case 26:
 			q31_rotorposition_hall = Hall_26;
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_64 - Hall_26;
+#endif
 
 			i8_recent_rotor_direction = -i16_hall_order;
 			break;
@@ -1936,32 +1959,50 @@ int main(void)
 			//6 cases for reverse direction
 		case 46:
 			q31_rotorposition_hall = Hall_64;
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_26 - Hall_64;
+#endif
 
 			i8_recent_rotor_direction = i16_hall_order;
 			break;
 		case 62:
 			q31_rotorposition_hall = Hall_26;
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_32 - Hall_26;
+#endif
 
 			i8_recent_rotor_direction = i16_hall_order;
 			break;
 		case 23:
 			q31_rotorposition_hall = Hall_32;
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_13 - Hall_32;
+#endif
 
 			i8_recent_rotor_direction = i16_hall_order;
 			uint16_half_rotation_counter = 0;
 			break;
 		case 31:
 			q31_rotorposition_hall = Hall_13;
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_51 - Hall_13;
+#endif
 
 			i8_recent_rotor_direction = i16_hall_order;
 			break;
 		case 15:
 			q31_rotorposition_hall = Hall_51;
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_45 - Hall_51;
+#endif
 
 			i8_recent_rotor_direction = i16_hall_order;
 			break;
 		case 54:
 			q31_rotorposition_hall = Hall_45;
+#ifdef DYNAMIC_30_DEG
+            deg_30 = Hall_64 - Hall_45;
+#endif
 
 			i8_recent_rotor_direction = i16_hall_order;
 			uint16_full_rotation_counter = 0;
@@ -2367,19 +2408,23 @@ int main(void)
     uint8_t pas_is_set(void) {
         return uint32_PAS != 32000;
     }
+
+    uint8_t pas_msb(void) { return (uint8_t) (uint32_PAS >> 8) & 0xFF; }
+
 	void autodetect() {
 		SET_BIT(TIM1->BDTR, TIM_BDTR_MOE);
 		MS.hall_angle_detect_flag = 0; //set uq to contstant value in FOC.c for open loop control
 		q31_rotorposition_absolute = 1 << 31;
 		i16_hall_order = 1;//reset hall order
-		MS.i_d_setpoint= 120; //set MS.id to appr. 2000mA
+		MS.i_d_setpoint= 200; //set MS.id to appr. 2000mA
 		MS.i_q_setpoint= 0;
 		//	uint8_t zerocrossing = 0;
 		//	q31_t diffangle = 0;
 		HAL_Delay(5);
-		for (i = 0; i < 1080; i++) {
+		for (i = 0; i < 4320; i++) {
 			HAL_IWDG_Refresh(&hiwdg);
-			q31_rotorposition_absolute += 11930465; //drive motor in open loop with steps of 1 deg
+			/* q31_rotorposition_absolute += 11930465; //drive motor in open loop with steps of 1 deg */
+			q31_rotorposition_absolute += 2386093; //drive motor in open loop with steps of 0.2 deg
 			HAL_Delay(5);
 			//printf_("%d, %d, %d, %d\n", temp3>>16,temp4>>16,temp5,temp6);
 
@@ -2478,7 +2523,9 @@ int main(void)
 	void get_standstill_position(){
 		HAL_Delay(100);
 		HAL_TIM_IC_CaptureCallback(&htim2); //read in initial rotor position
-
+#ifdef DYNAMIC_30_DEG 
+        deg_30 = 357913941; // reset to default
+#endif
 		switch (ui8_hall_state) {
 		//6 cases for forward direction
 		case 2:

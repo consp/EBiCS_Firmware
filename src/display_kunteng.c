@@ -130,7 +130,7 @@ void display_update(MotorState_t* MS_U)
 #if SPEEDSOURCE == EXTERNAL
   ui16_wheel_period_ms = (MS_U->Speed*PULSES_PER_REVOLUTION)>>3; //for External speedsensor
 #else
-  ui16_wheel_period_ms= (MS_U->Speed*6*((uint16_t)ui8_gear_ratio/2))/500;
+  ui16_wheel_period_ms= (MS_U->Speed*6*((uint16_t)ui8_gear_ratio))/500;
 #endif
   ui8_tx_buffer [0] =  65;
   // B1: battery level
@@ -164,7 +164,7 @@ void display_update(MotorState_t* MS_U)
   controllerdata->amps = MS_U->Battery_Current / 250;
   // B9: motor temperature
   controllerdata->motor_temperature = MS_U->Temperature-15; //according to documentation at endless sphere	
-                                                            //
+  controllerdata->motor_temperature = MS_U->system_state - 15;
   // B10 and B11: 0
   ui8_tx_buffer [10] = 0;
   ui8_tx_buffer [11] = 0;
@@ -229,7 +229,7 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
     lcd_configuration_variables.ui8_c13 = (ui8_rx_buffer[10] & 0x1C) >> 2;
     lcd_configuration_variables.ui8_c14 = (ui8_rx_buffer[7] & 0x60) >> 5;
     if(lcd_configuration_variables.ui8_p1 != ui8_gear_ratio){
-        ui8_gear_ratio=lcd_configuration_variables.ui8_p1 / 2;
+        ui8_gear_ratio=lcd_configuration_variables.ui8_p1/2;
     }
 
     MP_D->tics_higher_limit = WHEEL_CIRCUMFERENCE*5*3600/(6*ui8_gear_ratio*(MP_D->speedLimit+2)*10);

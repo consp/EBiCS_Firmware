@@ -59,8 +59,8 @@
 #define SPEEDFILTER 1
 // limit speed without legal flag set, so you can set max with throttle
 #define LIMIT_SPEED_WITHOUT_LEGAL_FLAG
-// #define SIXSTEPTHRESHOLD 3500
-#define SIXSTEPTHRESHOLD 4000
+#define SIXSTEPTHRESHOLD 8000
+// #define SIXSTEPTHRESHOLD 4000
 #define TS_COEF 60000
 // pas
 #define PAS_TIMEOUT 4000
@@ -104,6 +104,7 @@
 /* LCD8 Settings */
 #define ALLOW_DYNAMIC_CURRENT                // Uncomment to allow P5 to controll the max battery current
 #define ALLOW_DYNAMIC_REVERSE                // Uncomment to allow C2 to change the direction of rotation
-#define BRAKELIGHT_IS_BACKLIGHT
+#define BRAKELIGHT_IS_BACKLIGHT              // Uncomment to use the brakelight signal/port for the backlight
+#define DYNAMIC_30_DEG                       // Uncomment to use a dynamic deg_30 variable, the value is calculated from the hall sensor data. Use this if your variation in hall inputs is too big
 
 #endif /* CONFIG_H_ */
