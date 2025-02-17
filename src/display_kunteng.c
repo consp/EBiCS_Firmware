@@ -164,6 +164,7 @@ void display_update(MotorState_t* MS_U)
   controllerdata->amps = MS_U->Battery_Current / 250;
   // B9: motor temperature
   controllerdata->motor_temperature = MS_U->Temperature-15; //according to documentation at endless sphere	
+                                                            //
   // B10 and B11: 0
   ui8_tx_buffer [10] = 0;
   ui8_tx_buffer [11] = 0;
@@ -228,11 +229,14 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
     lcd_configuration_variables.ui8_c13 = (ui8_rx_buffer[10] & 0x1C) >> 2;
     lcd_configuration_variables.ui8_c14 = (ui8_rx_buffer[7] & 0x60) >> 5;
     if(lcd_configuration_variables.ui8_p1 != ui8_gear_ratio){
-        ui8_gear_ratio=lcd_configuration_variables.ui8_p1;
+        ui8_gear_ratio=lcd_configuration_variables.ui8_p1 / 2;
     }
 
+    MP_D->tics_higher_limit = WHEEL_CIRCUMFERENCE*5*3600/(6*ui8_gear_ratio*(MP_D->speedLimit+2)*10);
+    MP_D->tics_lower_limit = WHEEL_CIRCUMFERENCE*5*3600/(6*ui8_gear_ratio*MP_D->speedLimit*10); //tics=wheelcirc*timerfrequency/(no. of hallevents per rev*gear-ratio*speedlimit)*3600/1000000
+
 #ifdef ALLOW_DYNAMIC_CURRENT
-    MS_D->battery_max_current = displaydata->p5 * 1000; // convert to milliamps
+    MP_D->battery_current_max = displaydata->p5 * 1000; // convert to milliamps
 #endif
 #ifdef ALLOW_DYNAMIC_REVERSE
     i8_reverse_flag = displaydata->c2 == 1 ? -1 : 1;
@@ -242,10 +246,16 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
      if(lcd_configuration_variables.ui8_light){
     	 HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);
     	 HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+#ifdef BRAKELIGHT_IS_BACKLIGHT
+			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_SET);
+#endif
      }
      else{
     	 HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_RESET);
     	 HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+#ifdef BRAKELIGHT_IS_BACKLIGHT
+			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_RESET);
+#endif
      }
 
      display_update(MS_D);

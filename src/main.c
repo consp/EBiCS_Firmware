@@ -99,7 +99,7 @@ IWDG_HandleTypeDef hiwdg;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-
+extern uint8_t ui8_gear_ratio;
 uint32_t ui32_tim1_counter=0;
 uint32_t ui32_tim3_counter=0;
 uint8_t ui8_hall_state=0;
@@ -217,8 +217,6 @@ q31_t Hall_64 = 0;
 q31_t Hall_51 = 0;
 q31_t Hall_45 = 0;
 
-const q31_t tics_lower_limit = WHEEL_CIRCUMFERENCE*5*3600/(6*GEAR_RATIO*SPEEDLIMIT*10); //tics=wheelcirc*timerfrequency/(no. of hallevents per rev*gear-ratio*speedlimit)*3600/1000000
-const q31_t tics_higher_limit = WHEEL_CIRCUMFERENCE*5*3600/(6*GEAR_RATIO*(SPEEDLIMIT+2)*10);
 uint32_t uint32_tics_filtered=1000000;
 
 uint16_t VirtAddVarTab[NB_OF_VAR] = { 	EEPROM_POS_HALL_ORDER,
@@ -923,7 +921,7 @@ int main(void)
 #ifdef SPEEDTHROTTLE
 
 
-					uint16_mapped_throttle = uint16_mapped_throttle*SPEEDLIMIT/PH_CURRENT_MAX;//throttle override: calulate speed target from thottle
+					uint16_mapped_throttle = uint16_mapped_throttle*MS.speedLimit/PH_CURRENT_MAX;//throttle override: calulate speed target from thottle
 
 
 
@@ -1106,7 +1104,6 @@ int main(void)
 				while (buffer[i] != '\0')
 				{i++;}
 				HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&buffer, i);
-
 
 				ui8_print_flag=0;
 
@@ -1325,7 +1322,7 @@ int main(void)
 		 */
 		sConfig.Channel = ADC_CHANNEL_9; // connector AD1, temperature or torque input for Controller from PhoebeLiu @ aliexpress
 		sConfig.Rank = ADC_REGULAR_RANK_7;
-		sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
+		sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5; // highest sample time to level out jitter, unlikely to be enough though for 100k NTCs
 		if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
 		{
 			_Error_Handler(__FILE__, __LINE__);
@@ -1980,13 +1977,13 @@ int main(void)
 #if SPEED_PLL
 		if(ui16_erps>30){   //360 interpolation at higher erps
 			if(ui8_hall_case==32||ui8_hall_case==23){
-				q31_angle_per_tic = speed_PLL(q31_rotorposition_PLL,q31_rotorposition_hall, SPDSHFT*tics_higher_limit/(uint32_tics_filtered>>3));
+				q31_angle_per_tic = speed_PLL(q31_rotorposition_PLL,q31_rotorposition_hall, SPDSHFT*MP.tics_higher_limit/(uint32_tics_filtered>>3));
 
 			}
 		}
 		else{
 
-			q31_angle_per_tic = speed_PLL(q31_rotorposition_PLL,q31_rotorposition_hall, SPDSHFT*tics_higher_limit/(uint32_tics_filtered>>3));
+			q31_angle_per_tic = speed_PLL(q31_rotorposition_PLL,q31_rotorposition_hall, SPDSHFT*MP.tics_higher_limit/(uint32_tics_filtered>>3));
 		}
 
 #endif
@@ -2075,7 +2072,7 @@ int main(void)
 #else
 		if(__HAL_TIM_GET_COUNTER(&htim2) < 12000)
 		{
-			No2.Tx.Wheeltime_ms = (MS.Speed*GEAR_RATIO*6)>>9; //>>9 because of 500kHZ timer2 frequency, 512 tics per ms should be OK *6 because of 6 hall interrupts per electric revolution.
+			No2.Tx.Wheeltime_ms = (MS.Speed*ui8_gear_ratio*6)>>9; //>>9 because of 500kHZ timer2 frequency, 512 tics per ms should be OK *6 because of 6 hall interrupts per electric revolution.
 
 		}
 		else
@@ -2099,11 +2096,17 @@ int main(void)
 		if(!No2.Rx.Headlight)
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_RESET);
+#ifdef BRAKELIGHT_IS_BACKLIGHT
+			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_RESET);
+#endif
 
 		}
 		else // KM_HEADLIGHT_ON, KM_HEADLIGHT_LOW, KM_HEADLIGHT_HIGH
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);
+#ifdef BRAKELIGHT_IS_BACKLIGHT
+			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_SET);
+#endif
 
 		}
 
@@ -2141,7 +2144,7 @@ int main(void)
 #else
 		if(__HAL_TIM_GET_COUNTER(&htim2) < 12000)
 		{
-			KM.Tx.Wheeltime_ms = (MS.Speed*GEAR_RATIO*6)>>9; //>>9 because of 500kHZ timer2 frequency, 512 tics per ms should be OK *6 because of 6 hall interrupts per electric revolution.
+			KM.Tx.Wheeltime_ms = (MS.Speed*ui8_gear_ratio*6)>>9; //>>9 because of 500kHZ timer2 frequency, 512 tics per ms should be OK *6 because of 6 hall interrupts per electric revolution.
 
 		}
 		else
@@ -2171,11 +2174,17 @@ int main(void)
 		if(KM.Rx.Headlight == KM_HEADLIGHT_OFF)
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_RESET);
+#ifdef BRAKELIGHT_IS_BACKLIGHT
+			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_RESET);
+#endif
 
 		}
 		else // KM_HEADLIGHT_ON, KM_HEADLIGHT_LOW, KM_HEADLIGHT_HIGH
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);
+#ifdef BRAKELIGHT_IS_BACKLIGHT
+			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_SET);
+#endif
 
 		}
 
@@ -2247,11 +2256,17 @@ int main(void)
 		if(BF.Rx.Headlight)
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);
+#ifdef BRAKELIGHT_IS_BACKLIGHT
+			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_SET);
+#endif
 
 		}
 		else
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_RESET);
+#ifdef BRAKELIGHT_IS_BACKLIGHT
+			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_RESET);
+#endif
 
 		}
 
@@ -2492,15 +2507,15 @@ int main(void)
 	}
 
 	int32_t speed_to_tics (uint8_t speed){
-		return WHEEL_CIRCUMFERENCE*5*3600/(6*GEAR_RATIO*speed*10);
+		return WHEEL_CIRCUMFERENCE*5*3600/(6*ui8_gear_ratio*speed*10);
 	}
 
 	int8_t tics_to_speed (uint32_t tics){
-		return WHEEL_CIRCUMFERENCE*5*3600/(6*GEAR_RATIO*tics*10);
+		return WHEEL_CIRCUMFERENCE*5*3600/(6*ui8_gear_ratio*tics*10);
 	}
 
 	int16_t internal_tics_to_speedx100 (uint32_t tics){
-		return WHEEL_CIRCUMFERENCE*50*3600/(6*GEAR_RATIO*tics);
+		return WHEEL_CIRCUMFERENCE*50*3600/(6*ui8_gear_ratio*tics);
 	}
 
 	int16_t external_tics_to_speedx100 (uint32_t tics){

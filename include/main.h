@@ -202,7 +202,8 @@ typedef struct
 	uint8_t       	pulses_per_revolution;
 	uint16_t       	phase_current_max;
 	int32_t       	battery_current_max;
-
+    q31_t           tics_lower_limit;
+    q31_t           tics_higher_limit;
 
 }MotorParams_t;
 
@@ -220,4 +221,4 @@ void _Error_Handler(char *, int);
 
 #endif /* __MAIN_H__ */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+/************************ (C) COPYRIGHT STMicr// ADC 12 Bit, 10k Pullup, Rückgabewert in °Coelectronics *****END OF FILE****/
