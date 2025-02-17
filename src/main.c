@@ -2097,7 +2097,7 @@ int main(void)
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_RESET);
 #ifdef BRAKELIGHT_IS_BACKLIGHT
-			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(BRAKE_LIGHT_GPIO_Port, BRAKE_LIGHT_Pin, GPIO_PIN_RESET);
 #endif
 
 		}
@@ -2105,7 +2105,7 @@ int main(void)
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);
 #ifdef BRAKELIGHT_IS_BACKLIGHT
-			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(BRAKE_LIGHT_GPIO_Port, BRAKE_LIGHT_Pin, GPIO_PIN_SET);
 #endif
 
 		}
@@ -2175,7 +2175,7 @@ int main(void)
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_RESET);
 #ifdef BRAKELIGHT_IS_BACKLIGHT
-			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(BRAKE_LIGHT_GPIO_Port, BRAKE_LIGHT_Pin, GPIO_PIN_RESET);
 #endif
 
 		}
@@ -2183,7 +2183,7 @@ int main(void)
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);
 #ifdef BRAKELIGHT_IS_BACKLIGHT
-			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(BRAKE_LIGHT_GPIO_Port, BRAKE_LIGHT_Pin, GPIO_PIN_SET);
 #endif
 
 		}
@@ -2257,7 +2257,7 @@ int main(void)
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);
 #ifdef BRAKELIGHT_IS_BACKLIGHT
-			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(BRAKE_LIGHT_GPIO_Port, BRAKE_LIGHT_Pin, GPIO_PIN_SET);
 #endif
 
 		}
@@ -2265,7 +2265,7 @@ int main(void)
 		{
 			HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_RESET);
 #ifdef BRAKELIGHT_IS_BACKLIGHT
-			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(BRAKE_LIGHT_GPIO_Port, BRAKE_LIGHT_Pin, GPIO_PIN_RESET);
 #endif
 
 		}

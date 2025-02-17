@@ -247,14 +247,14 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
     	 HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);
     	 HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 #ifdef BRAKELIGHT_IS_BACKLIGHT
-			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(BRAKE_LIGHT_GPIO_Port, BRAKE_LIGHT_Pin, GPIO_PIN_SET);
 #endif
      }
      else{
     	 HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_RESET);
     	 HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 #ifdef BRAKELIGHT_IS_BACKLIGHT
-			HAL_GPIO_WritePin(Brake_Light_gpio_port, Brake_Light_pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(BRAKE_LIGHT_GPIO_Port, BRAKE_LIGHT_Pin, GPIO_PIN_RESET);
 #endif
      }
 
