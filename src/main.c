@@ -551,7 +551,7 @@ int main(void)
 #ifndef NCTE
     y = 0;
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-	while ((BRAKE_SIGNAL HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin))&&(adc->throttle>(ui16_throttle_offset+20))){
+	while ((!HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin))&&(adc->throttle>(ui16_throttle_offset+20))){
 		if (y%5) HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 		HAL_IWDG_Refresh(&hiwdg);
 		HAL_Delay(200);
@@ -1679,11 +1679,7 @@ int main(void)
 		/*Configure GPIO pin : Brake_Pin */
 		GPIO_InitStruct.Pin = Brake_Pin;
 		GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-#ifdef INVERT_BRAKE_SIGNAL
-		GPIO_InitStruct.Pull = GPIO_NOPULL;
-#else
 		GPIO_InitStruct.Pull = GPIO_PULLUP;
-#endif
 		HAL_GPIO_Init(Brake_GPIO_Port, &GPIO_InitStruct);
 
 
@@ -2408,8 +2404,6 @@ int main(void)
     uint8_t pas_is_set(void) {
         return uint32_PAS != 32000;
     }
-
-    uint8_t pas_msb(void) { return (uint8_t) (uint32_PAS >> 8) & 0xFF; }
 
 	void autodetect() {
 		SET_BIT(TIM1->BDTR, TIM_BDTR_MOE);

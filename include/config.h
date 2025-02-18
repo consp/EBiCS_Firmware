@@ -59,7 +59,7 @@
 #define SPEEDFILTER 1
 // limit speed without legal flag set, so you can set max with throttle
 #define LIMIT_SPEED_WITHOUT_LEGAL_FLAG
-#define SIXSTEPTHRESHOLD 8000
+#define SIXSTEPTHRESHOLD 6000
 // #define SIXSTEPTHRESHOLD 4000
 #define TS_COEF 60000
 // pas
@@ -68,7 +68,7 @@
 #define FRAC_HIGH 30
 #define FRAC_LOW 15
 // throttle
-#define THROTTLE_OFFSET 1250
+#define THROTTLE_OFFSET 900
 #define THROTTLE_MAX 3000
 // push assist
 #define PUSHASSIST_CURRENT 65

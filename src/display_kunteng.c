@@ -164,7 +164,6 @@ void display_update(MotorState_t* MS_U)
   controllerdata->amps = MS_U->Battery_Current / 250;
   // B9: motor temperature
   controllerdata->motor_temperature = MS_U->Temperature-15; //according to documentation at endless sphere	
-  controllerdata->motor_temperature = MS_U->system_state - 15;
   // B10 and B11: 0
   ui8_tx_buffer [10] = 0;
   ui8_tx_buffer [11] = 0;
