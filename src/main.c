@@ -316,7 +316,7 @@ static void dyn_adc_state(q31_t angle);
 static void set_inj_channel(char state);
 void get_standstill_position();
 q31_t speed_PLL (q31_t ist, q31_t soll, uint8_t speedadapt);
-int32_t map (int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max);
+static int32_t map (int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max);
 int32_t speed_to_tics (uint8_t speed);
 int8_t tics_to_speed (uint32_t tics);
 int16_t internal_tics_to_speedx100 (uint32_t tics);
@@ -2388,7 +2388,7 @@ int main(void)
 
 #endif
 
-	int32_t map (int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
+	static inline int32_t map (int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
 	{
 		// if input is smaller/bigger than expected return the min/max out ranges value
 		if (x < in_min)
@@ -2406,7 +2406,7 @@ int main(void)
 	}
 
 	//assuming, a proper AD conversion takes 350 timer tics, to be confirmed. DT+TR+TS deadtime + noise subsiding + sample time
-	void dyn_adc_state(q31_t angle){
+	static inline void dyn_adc_state(q31_t angle){
 		if (switchtime[2]>switchtime[0] && switchtime[2]>switchtime[1]){
 			MS.char_dyn_adc_state = 1; // -90Â° .. +30Â°: Phase C at high dutycycles
 			if(switchtime[2]>1500)TIM1->CCR4 =  switchtime[2]-TRIGGER_OFFSET_ADC;
@@ -2426,7 +2426,7 @@ int main(void)
 		}
 	}
 
-	static void set_inj_channel(char state){
+	static inline void set_inj_channel(char state){
 
 		switch (state)
 		{
@@ -2461,7 +2461,7 @@ int main(void)
 
 
 	}
-	uint8_t throttle_is_set(void){
+	inline uint8_t throttle_is_set(void){
 #ifdef THROTTLE_SWITCH_AT_STARTUP
         if(uint16_mapped_throttle > 0 && ui8_throttle_is_brake == 0)
 #else
@@ -2472,18 +2472,18 @@ int main(void)
 		}
 		else return 0;
 	}
-    uint8_t brake_is_set(void) {
+    inline uint8_t brake_is_set(void) {
 #ifdef THROTTLE_SWITCH_AT_STARTUP
         return !HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin) || (ui8_throttle_is_brake && uint16_mapped_BRAKE > 0);
 #else
         return !HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin);
 #endif
     }
-    uint8_t pas_is_set(void) {
+    inline uint8_t pas_is_set(void) {
         return uint32_PAS != 32000;
     }
 
-	void autodetect() {
+	void autodetect(void) {
 		SET_BIT(TIM1->BDTR, TIM_BDTR_MOE);
 		MS.hall_angle_detect_flag = 0; //set uq to contstant value in FOC.c for open loop control
 		q31_rotorposition_absolute = 1 << 31;
@@ -2593,7 +2593,7 @@ int main(void)
 
 	}
 
-	void get_standstill_position(){
+	inline void get_standstill_position(void){
 		HAL_Delay(100);
 		HAL_TIM_IC_CaptureCallback(&htim2); //read in initial rotor position
 #ifdef DYNAMIC_30_DEG 
@@ -2630,19 +2630,19 @@ int main(void)
 		return WHEEL_CIRCUMFERENCE*5*3600/(6*ui8_gear_ratio*speed*10);
 	}
 
-	int8_t tics_to_speed (uint32_t tics){
+	inline int8_t tics_to_speed (uint32_t tics){
 		return WHEEL_CIRCUMFERENCE*5*3600/(6*ui8_gear_ratio*tics*10);
 	}
 
-	int16_t internal_tics_to_speedx100 (uint32_t tics){
+	inline int16_t internal_tics_to_speedx100 (uint32_t tics){
 		return WHEEL_CIRCUMFERENCE*50*3600/(6*ui8_gear_ratio*tics);
 	}
 
-	int16_t external_tics_to_speedx100 (uint32_t tics){
+	inline int16_t external_tics_to_speedx100 (uint32_t tics){
 		return WHEEL_CIRCUMFERENCE*8*360/(PULSES_PER_REVOLUTION*tics);
 	}
 
-	void runPIcontrol(){
+	inline void runPIcontrol(){
 
 
 		q31_t_Battery_Current_accumulated -= q31_t_Battery_Current_accumulated>>8;
@@ -2707,7 +2707,7 @@ int main(void)
 		PI_flag=0;
 	}
 
-	q31_t speed_PLL (q31_t ist, q31_t soll, uint8_t speedadapt)
+	inline q31_t speed_PLL (q31_t ist, q31_t soll, uint8_t speedadapt)
 	{
 		q31_t q31_p;
 		static q31_t q31_d_i = 0;
@@ -2729,7 +2729,7 @@ int main(void)
 	}
 
 #if (R_TEMP_PULLUP)
-	int16_t T_NTC(uint16_t ADC) // ADC 12 Bit, 10k Pullup, Rückgabewert in °C
+	inline int16_t T_NTC(uint16_t ADC) // ADC 12 Bit, 10k Pullup, Rückgabewert in °C
 
 	{
 		uint16_t Ux1000 = 3300;
@@ -2834,7 +2834,7 @@ int16_t motor_temperature_window[ADC_TEMP_WINDOW] = {25}; // fill with 25c, stab
 *
 */
 
-    int16_t T_NTC(uint16_t adc_value) {
+    inline int16_t T_NTC(uint16_t adc_value) {
         int16_t p1,p2;
         p1 = NTC_table[ (adc_value >> 3)  ];
         p2 = NTC_table[ (adc_value >> 3)+1];

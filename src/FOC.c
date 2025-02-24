@@ -42,10 +42,10 @@ char PI_flag=0;
 extern TIM_HandleTypeDef htim1;
 
 
-void FOC_calculation(int16_t int16_i_as, int16_t int16_i_bs, q31_t q31_teta, int16_t int16_i_q_target, MotorState_t* MS_FOC);
-void svpwm(q31_t q31_u_alpha, q31_t q31_u_beta);
+inline void FOC_calculation(int16_t int16_i_as, int16_t int16_i_bs, q31_t q31_teta, int16_t int16_i_q_target, MotorState_t* MS_FOC);
+inline void svpwm(q31_t q31_u_alpha, q31_t q31_u_beta);
 
-void FOC_calculation(int16_t int16_i_as, int16_t int16_i_bs, q31_t q31_teta, int16_t int16_i_q_target, MotorState_t* MS_FOC)
+inline void FOC_calculation(int16_t int16_i_as, int16_t int16_i_bs, q31_t q31_teta, int16_t int16_i_q_target, MotorState_t* MS_FOC)
 {
 
 	 q31_t q31_i_alpha = 0;
@@ -130,7 +130,7 @@ void FOC_calculation(int16_t int16_i_as, int16_t int16_i_bs, q31_t q31_teta, int
 
 }
 //PI Control for quadrature current iq (torque)
-q31_t PI_control (PI_control_t* PI_c)
+inline q31_t PI_control (PI_control_t* PI_c)
 {
 
   q31_t q31_p; //proportional part
@@ -156,7 +156,7 @@ q31_t PI_control (PI_control_t* PI_c)
 }
 
 
-void svpwm(q31_t q31_u_alpha, q31_t q31_u_beta)	{
+inline void svpwm(q31_t q31_u_alpha, q31_t q31_u_beta)	{
 
 //SVPWM according to chapter 4.9 of UM1052
 
