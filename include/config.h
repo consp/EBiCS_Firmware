@@ -42,24 +42,25 @@
 #define BATTERY_LEVEL_5 294000
 
 // pid values
-#define P_FACTOR_I_Q 500
-#define I_FACTOR_I_Q 20
-#define P_FACTOR_I_D 500
-#define I_FACTOR_I_D 20
+#define P_FACTOR_I_Q 700
+#define I_FACTOR_I_Q 24
+#define P_FACTOR_I_D 700
+#define I_FACTOR_I_D 24
 
-#define P_FACTOR_PLL 7
-#define I_FACTOR_PLL 5
-// #define P_FACTOR_PLL 10
-// #define I_FACTOR_PLL 10
+// #define P_FACTOR_PLL 7
+// #define I_FACTOR_PLL 5
+#define P_FACTOR_PLL 11
+#define I_FACTOR_PLL 9
+
 #define SPDSHFT 0
 
 #define P_FACTOR_SPEED 100
 #define I_FACTOR_SPEED 10
 
-#define SPEEDFILTER 1
+#define SPEEDFILTER 0
 // limit speed without legal flag set, so you can set max with throttle
 #define LIMIT_SPEED_WITHOUT_LEGAL_FLAG
-#define SIXSTEPTHRESHOLD 6000
+#define SIXSTEPTHRESHOLD 12000
 // #define SIXSTEPTHRESHOLD 4000
 #define TS_COEF 60000
 // pas
@@ -81,21 +82,21 @@
 #define SPEEDLIMIT 30
 #define PULSES_PER_REVOLUTION 1
 // max phase current
-#define PH_CURRENT_MAX 1200
+#define PH_CURRENT_MAX 188 // ~ 20A
 #define BATTERYCURRENT_MAX 12000
-#define REGEN_CURRENT 4000
-#define REGEN_CURRENT_MAX 10000
+#define REGEN_CURRENT 46 // ~ 5A
+#define REGEN_CURRENT_MAX 10000 // My BMS limit
 // voltage, see cal
 #define VOLTAGE_MIN 820
 #define VOLTAGE_MAX 1160
 //
-#define SPEC_ANGLE -715827882
+// #define SPEC_ANGLE -715827882
 // #define DISPLAY_TYPE DISPLAY_TYPE_DEBUG //ASCII Printout for debugging
 // #define DISPLAY_TYPE DISPLAY_TYPE_KINGMETER_901U
 // #define DISPLAY_TYPE DISPLAY_TYPE_KINGMETER_618U
 #define DISPLAY_TYPE DISPLAY_TYPE_KUNTENG
 // #define DISPLAY_TYPE DISPLAY_TYPE_BAFANG
-#define SPEED_PLL 0 // not needed
+#define SPEED_PLL 1 // not needed
 #define SPEEDSOURCE INTERNAL
 #define AUTODETECT 0
 #define REVERSE 1
@@ -104,7 +105,9 @@
 /* LCD8 Settings */
 #define ALLOW_DYNAMIC_CURRENT                // Uncomment to allow P5 to controll the max battery current
 #define ALLOW_DYNAMIC_REVERSE                // Uncomment to allow C2 to change the direction of rotation
+#define ALLOW_DYNAMIC_REGEN                  // Uncomment to allow C5 to set regen current in A
 #define BRAKELIGHT_IS_BACKLIGHT              // Uncomment to use the brakelight signal/port for the backlight
-#define DYNAMIC_30_DEG                       // Uncomment to use a dynamic deg_30 variable, the value is calculated from the hall sensor data. Use this if your variation in hall inputs is too big
+
+#define THROTTLE_SWITCH_AT_STARTUP
 
 #endif /* CONFIG_H_ */

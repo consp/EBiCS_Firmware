@@ -9,6 +9,7 @@
 #include "display_kunteng.h"
 #include "stm32f1xx_hal.h"
 #include "eeprom.h"
+#define iabs(x) (((x) >= 0)?(x):-(x))
 extern volatile uint32_t adcData[9];
 static uint8_t ui8_tx_buffer[12];
 extern int8_t i8_reverse_flag;
@@ -147,7 +148,7 @@ void display_update(MotorState_t* MS_U)
   controllerdata->crc = 0;
   // B7: moving mode indication, bit
   //
-  controllerdata->mode_brake = BRAKE_SIGNAL HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin);
+  controllerdata->mode_brake = brake_is_set();
   controllerdata->mode_throttle = throttle_is_set();
   controllerdata->mode_assist = pas_is_set();
 
@@ -161,7 +162,7 @@ void display_update(MotorState_t* MS_U)
 
   //ui8_tx_buffer [8] =  (uint8_t)(((ui16_BatteryCurrent-ui16_current_cal_b+1)<<2)/current_cal_a);
   /* ui8_tx_buffer [8] =  (uint8_t)(MS_U->Battery_Current*MS_U->Voltage*CAL_BAT_V/82010000);   //Kalibrierung nach Binatone, empririsch ermittelt. Strom und Spannung in Milli, 13W pro digit */
-  controllerdata->amps = MS_U->Battery_Current / 250;
+  controllerdata->amps = iabs(MS_U->Battery_Current) / 250; // LCD8 takes it's own voltage for reference.
   // B9: motor temperature
   controllerdata->motor_temperature = MS_U->Temperature-15; //according to documentation at endless sphere	
   // B10 and B11: 0
@@ -240,7 +241,9 @@ void check_message(MotorState_t* MS_D, MotorParams_t* MP_D)
 #ifdef ALLOW_DYNAMIC_REVERSE
     i8_reverse_flag = displaydata->c2 == 1 ? -1 : 1;
 #endif
-
+#ifdef ALLOW_DYNAMIC_REGEN
+     MP_D->regen_current = (displaydata->c5 * 1000) / (CAL_I >> 8); 
+#endif
 
      if(lcd_configuration_variables.ui8_light){
     	 HAL_GPIO_WritePin(LIGHT_GPIO_Port, LIGHT_Pin, GPIO_PIN_SET);

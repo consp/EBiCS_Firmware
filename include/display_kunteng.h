@@ -86,7 +86,7 @@ typedef struct LCD8_display_data_t {
 			uint8_t 	c2 : 3;             // 0-1, sometimes 0-6 or 0-7                // Reverse rotation, only available if ALLOW_DYNAMIC_REVERSE is enabled, 0 = REVERSE = 1, 1 = REVERSE = -1
 			uint8_t		c1 : 3;             // 0-7                                      // PAS characteristics, NOT AVAILABLE
 			uint8_t 	unkown2 : 2; // B6
-			uint8_t 	c5 : 4;             // 0-10                                     // Current adjustment, NOT AVAILABLE
+			uint8_t 	c5 : 4;             // 0-10                                     // Regen Current adjustment
 			uint8_t 	unknown4 : 1;
 			uint8_t 	c14 : 2;            // 1-3                                      // Assist Level adjustment, NOT AVAILABLE
 			uint8_t 	unknown3 : 1;// B7

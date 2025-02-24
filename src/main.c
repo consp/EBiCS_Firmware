@@ -97,14 +97,17 @@ DMA_HandleTypeDef hdma_usart1_rx;
 IWDG_HandleTypeDef hiwdg;
 
 /* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
-
+/* Private variables -------------ui8_throttle_is_brake--------------------------------------------*/
+#ifdef THROTTLE_SWITCH_AT_STARTUP
+uint8_t ui8_throttle_is_brake = 1;
+#endif
 extern uint8_t ui8_gear_ratio;
 uint32_t ui32_tim1_counter=0;
 uint32_t ui32_tim3_counter=0;
 uint8_t ui8_hall_state=0;
 uint8_t ui8_hall_state_old=0;
 uint8_t ui8_hall_case =0;
+uint8_t ui8_hall_case_old =0;
 uint16_t ui16_tim2_recent=0;
 uint16_t ui16_timertics=5000; 					//timertics between two hall events for 60Â° interpolation
 uint16_t ui16_throttle;
@@ -118,6 +121,7 @@ uint16_t ui16_ph1_offset=0;
 uint16_t ui16_ph2_offset=0;
 uint16_t ui16_ph3_offset=0;
 int16_t i16_ph1_current=0;
+uint32_t transitions[6] = {0};
 
 int16_t i16_ph2_current=0;
 int16_t i16_ph2_current_filter=0;
@@ -161,6 +165,8 @@ uint32_t uint32_PAS=32000;
 q31_t q31_rotorposition_PLL = 0;
 q31_t q31_angle_per_tic = 0;
 
+uint8_t ui8_invalid_hall_case = 0;
+uint8_t ui8_ivcases[16] = {0};
 uint8_t ui8_UART_Counter=0;
 int8_t i8_recent_rotor_direction=1;
 int16_t i16_hall_order=1;
@@ -222,6 +228,7 @@ q31_t Hall_51 = 0;
 q31_t Hall_45 = 0;
 
 uint32_t uint32_tics_filtered=1000000;
+uint32_t uint32_tics_filtered_old=1000000;
 
 uint16_t VirtAddVarTab[NB_OF_VAR] = { 	EEPROM_POS_HALL_ORDER,
 		EEPROM_POS_HALL_45,
@@ -374,6 +381,7 @@ int main(void)
 	MP.wheel_cirumference = WHEEL_CIRCUMFERENCE;
 	MP.speedLimit=SPEEDLIMIT;
 	MP.battery_current_max = BATTERYCURRENT_MAX;
+    MP.regen_current = REGEN_CURRENT;
 
 
 	//init PI structs
@@ -519,9 +527,10 @@ int main(void)
 		temp4+=adc->throttle;
 #endif
 	}
-	ui16_ph1_offset=temp1>>5;
-	ui16_ph2_offset=temp2>>5;
-	ui16_ph3_offset=temp3>>5;
+    ui16_ph1_offset=temp1>>5;
+    ui16_ph2_offset=temp2>>5;
+    ui16_ph3_offset=temp3>>5;
+
 #ifdef THROTTLE_OFFSET
     ui16_throttle_offset = THROTTLE_OFFSET;
 #else
@@ -558,6 +567,15 @@ int main(void)
 		y++;
 		if(y==35) autodetect();
 	}
+#ifdef THROTTLE_SWITCH_AT_STARTUP 
+	while (!HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin)){
+		if (y%5) HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		HAL_IWDG_Refresh(&hiwdg);
+		HAL_Delay(200);
+		y++;
+		if(y==25) ui8_throttle_is_brake = 0;
+	}
+#endif
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
 #else
@@ -719,6 +737,9 @@ int main(void)
 			ui32_throttle_cumulated += adc->throttle; //get value from SP
 #endif
 			ui32_brake_adc_cumulated -= ui32_brake_adc_cumulated>>4;
+#ifdef THROTTLE_SWITCH_AT_STARTUP
+            ui32_brake_adc_cumulated += ui8_throttle_is_brake ? adc->throttle : adc->ad1;
+#endif
 			ui32_brake_adc_cumulated+=adc->ad1;//get value for analog brake from AD2 = PB0
 			ui16_brake_adc=ui32_brake_adc_cumulated>>4;
 			ui16_throttle = ui32_throttle_cumulated>>4;
@@ -801,43 +822,51 @@ int main(void)
 		//highest priority: regen by brake lever
 
 
-#ifdef ADC_BRAKE
+#if defined(ADC_BRAKE) || defined(THROTTLE_SWITCH_AT_STARTUP)
+#ifdef ALLOW_DYNAMIC_REGEN
+		uint16_mapped_BRAKE = map(ui16_brake_adc, ui16_throttle_offset , THROTTLE_MAX, 0, MP.regen_current);
+#else
 		uint16_mapped_BRAKE = map(ui16_brake_adc, ui16_throttle_offset , THROTTLE_MAX, 0, REGEN_CURRENT);
+#endif
+#else 
+        uint16_mapped_BRAKE = 0;
+#endif
 
-
+#if defined(THROTTLE_SWITCH_AT_STARTUP)
+		if(ui8_throttle_is_brake && uint16_mapped_BRAKE>0) brake_flag=1;
+#elif defined(ADC_BRAKE)
 		if(uint16_mapped_BRAKE>0) brake_flag=1;
 		else brake_flag=0;
+#endif
 
 
-		if(brake_flag){
-
-			//if(!HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin)){
-			//if(tics_to_speed(uint32_tics_filtered>>3)>6)int32_current_target=-REGEN_CURRENT; //only apply regen, if motor is turning fast enough
-			if(tics_to_speed(uint32_tics_filtered>>3)>6)int32_temp_current_target=uint16_mapped_BRAKE;
-			else int32_temp_current_target=0;
-
-
-#else
+#if !defined(ADC_BRAKE) && !defined(THROTTLE_SWITCH_AT_STARTUP)
 			if(HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin)) brake_flag=0;
 			else brake_flag=1;
-			if(brake_flag){
+#elif defined(THROTTLE_SWITCH_AT_STARTUP)
+			if(HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin) && uint16_mapped_BRAKE == 0) brake_flag=0;
+			else brake_flag=1;
+#endif
 
+			if(brake_flag){
 				if(tics_to_speed(uint32_tics_filtered>>3)>6){
-					int32_temp_current_target=REGEN_CURRENT; //only apply regen, if motor is turning fast enough
-				}
+#ifdef ALLOW_DYNAMIC_REGEN
+					int32_temp_current_target=uint16_mapped_BRAKE == 0 ? (MP.regen_current) : uint16_mapped_BRAKE; //only apply regen, if motor is turning fast enough
+#else
+					int32_temp_current_target=uint16_mapped_BRAKE == 0 ? (REGEN_CURRENT) : uint16_mapped_BRAKE; //only apply regen, if motor is turning fast enough
+#endif	
+                }
 				else int32_temp_current_target=0;
 
-#endif
-				int32_temp_current_target= -map(MS.Voltage*CAL_V,BATTERYVOLTAGE_MAX-1000,BATTERYVOLTAGE_MAX,int32_temp_current_target,0);
-			}
+				int32_temp_current_target= -map(MS.Voltage,BATTERYVOLTAGE_MAX-1000,BATTERYVOLTAGE_MAX,int32_temp_current_target,0);
 
-			//next priority: undervoltage protection
+			}
+            //next priority: undervoltage protection
 			else if(MS.Voltage<VOLTAGE_MIN)int32_temp_current_target=0;
 			//next priority: push assist
 			else if(ui8_Push_Assist_flag)int32_temp_current_target=(MS.assist_level*PUSHASSIST_CURRENT)>>8; //does not work for BAFANG and Kunteng protocol actually
 			// last priority normal ride conditiones
 			else {
-
 #ifdef TS_MODE //torque-sensor mode
 				//calculate current target form torque, cadence and assist level
 				int32_temp_current_target = (TS_COEF*(int32_t)(MS.assist_level)* (uint32_torque_cumulated>>5)/uint32_PAS)>>8; //>>5 aus Mittelung über eine Kurbelumdrehung, >>8 aus KM5S-Protokoll Assistlevel 0..255
@@ -969,6 +998,7 @@ int main(void)
 #endif //end throttle override
 
 			} //end else for normal riding
+              //
 			//ramp down setpoint at speed limit
 #ifdef LEGALFLAG
 			if(!brake_flag){ //only ramp down if no regen active
@@ -981,7 +1011,7 @@ int main(void)
 			}
 			//			else int32_temp_current_target=int32_temp_current_target;
 #elif defined(LIMIT_SPEED_WITHOUT_LEGAL_FLAG)
-            int32_temp_current_target=map(uint32_SPEEDx100_cumulated>>SPEEDFILTER, MP.speedLimit*100,(MP.speedLimit+2)*100,int32_temp_current_target,0);
+            if (!brake_flag) int32_temp_current_target=map(uint32_SPEEDx100_cumulated>>SPEEDFILTER, MP.speedLimit*100,(MP.speedLimit+2)*100,int32_temp_current_target,0);
 #endif //legalflag
 
 #if (DISPLAY_TYPE & DISPLAY_TYPE_KINGMETER || DISPLAY_TYPE & DISPLAY_TYPE_DEBUG)
@@ -1764,11 +1794,11 @@ int main(void)
 			{
 			case 1: //Phase C at high dutycycles, read from A+B directly
 			{
-				temp1=(q31_t)HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1);
-				i16_ph1_current = temp1 ;
+                temp1=(q31_t)HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1);
+                i16_ph1_current = temp1 ;
 
-				temp2=(q31_t)HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_1);
-				i16_ph2_current = temp2;
+                temp2=(q31_t)HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_1);
+                i16_ph2_current = temp2;
 			}
 			break;
 			case 2: //Phase A at high dutycycles, read from B+C (A = -B -C)
@@ -1809,14 +1839,15 @@ int main(void)
 			//extrapolate recent rotor position
 			ui16_tim2_recent = __HAL_TIM_GET_COUNTER(&htim2); // read in timertics since last event
 			if (MS.hall_angle_detect_flag) {
-				if(ui16_timertics<SIXSTEPTHRESHOLD && ui16_tim2_recent<200)ui8_6step_flag=0;
+				if(ui16_timertics<SIXSTEPTHRESHOLD && ui16_tim2_recent<1000)ui8_6step_flag=0; // 200
 				if(ui16_timertics>(SIXSTEPTHRESHOLD*6)>>2)ui8_6step_flag=1;
 
 
 				if(MS.angle_est){
 					q31_rotorposition_PLL += q31_angle_per_tic;
 				}
-				if (ui16_tim2_recent < ui16_timertics+(ui16_timertics>>2) && !ui8_overflow_flag && !ui8_6step_flag) { //prevent angle running away at standstill
+				if (ui16_tim2_recent < (ui16_timertics*9) >> 2 && !ui8_overflow_flag && !ui8_6step_flag) { //prevent angle running away at standstill
+                    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 					if(MS.angle_est&&iabs(q31_PLL_error)<deg_30){
 						q31_rotorposition_absolute=q31_rotorposition_PLL;
 						MS.system_state=PLL;
@@ -1829,12 +1860,11 @@ int main(void)
 						MS.system_state=Interpolation;
 					}
 				} else {
+                    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 					ui8_overflow_flag = 1;
 					if(MS.KV_detect_flag)q31_rotorposition_absolute = q31_rotorposition_hall;
 					else q31_rotorposition_absolute = q31_rotorposition_hall+i8_direction*sign(MS.i_q_setpoint)*deg_30;//offset of 30 degree to get the middle of the sector
 					MS.system_state=SixStep;
-					//	}
-
 				}
 			} //end if hall angle detect
 			//temp2=(((q31_rotorposition_absolute >> 23) * 180) >> 8);
@@ -1861,9 +1891,9 @@ int main(void)
 			//temp5=__HAL_TIM_GET_COUNTER(&htim1);
 			//set PWM
 
-			TIM1->CCR1 =  (uint16_t) switchtime[0];
-			TIM1->CCR2 =  (uint16_t) switchtime[1];
-			TIM1->CCR3 =  (uint16_t) switchtime[2];
+            TIM1->CCR1 =  (uint16_t) switchtime[0];
+            TIM1->CCR2 =  (uint16_t) switchtime[1];
+            TIM1->CCR3 =  (uint16_t) switchtime[2];
 			//__enable_irq();
 
 
@@ -1899,7 +1929,37 @@ int main(void)
 		ui8_overflow_flag=0;
 		ui8_SPEED_control_flag=1;
 
-
+        /* if (ui8_hall_case_old != ui8_hall_case) { */
+        /*     if ( */
+        /*            !(ui8_hall_case == 11 ||  */
+        /*             ui8_hall_case == 22 ||  */
+        /*             ui8_hall_case == 33 ||  */
+        /*             ui8_hall_case == 44 ||  */
+        /*             ui8_hall_case == 55 ||  */
+        /*             ui8_hall_case == 66)) { */
+        /*         // possible invalid transition, check if valid */
+        /*           */
+        /*         if (!(ui8_hall_case == 64 ||  */
+        /*             ui8_hall_case == 45 ||  */
+        /*             ui8_hall_case == 51 ||  */
+        /*             ui8_hall_case == 13 ||  */
+        /*             ui8_hall_case == 32 ||  */
+        /*             ui8_hall_case == 26) && i8_recent_rotor_direction == -i16_hall_order) { */
+        /*             ui8_ivcases[ui8_invalid_hall_case++] = ui8_hall_case; */
+        /*             ui8_invalid_hall_case %= 16; */
+        /*         } */
+        /*         if (!(ui8_hall_case == 46 ||  */
+        /*             ui8_hall_case == 54 ||  */
+        /*             ui8_hall_case == 15 ||  */
+        /*             ui8_hall_case == 31 ||  */
+        /*             ui8_hall_case == 23 ||  */
+        /*             ui8_hall_case == 62) && i8_recent_rotor_direction == i16_hall_order) { */
+        /*             ui8_ivcases[ui8_invalid_hall_case++] = ui8_hall_case; */
+        /*             ui8_invalid_hall_case %= 16; */
+        /*         } */
+        /*     } */
+        /* } */
+        /* ui8_hall_case_old = ui8_hall_case; */
 
 		switch (ui8_hall_case) //12 cases for each transition from one stage to the next. 6x forward, 6x reverse
 		{
@@ -1907,56 +1967,68 @@ int main(void)
 		case 64:
 			q31_rotorposition_hall = Hall_64;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_45 - Hall_64;
+            deg_30 = (Hall_45 - Hall_64);
 #endif
 			i8_recent_rotor_direction = -i16_hall_order;
 			uint16_full_rotation_counter = 0;
+            if (transitions[0] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[0] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[0] = uint32_tics_filtered - uint32_tics_filtered_old;
+            uint32_tics_filtered_old = uint32_tics_filtered;
 			break;
 		case 45:
 			q31_rotorposition_hall = Hall_45;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_51 - Hall_45;
+            deg_30 = (Hall_51 - Hall_45);
 #endif
 			i8_recent_rotor_direction = -i16_hall_order;
+            if (transitions[1] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[1] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[1] = uint32_tics_filtered - uint32_tics_filtered_old;
+            uint32_tics_filtered_old = uint32_tics_filtered;
 			break;
 		case 51:
 			q31_rotorposition_hall = Hall_51;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_13 - Hall_51;
+            deg_30 = (Hall_13 - Hall_51);
 #endif
 			i8_recent_rotor_direction = -i16_hall_order;
+            if (transitions[2] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[2] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[2] = uint32_tics_filtered - uint32_tics_filtered_old;
+            uint32_tics_filtered_old = uint32_tics_filtered;
 			break;
 		case 13:
 			q31_rotorposition_hall = Hall_13;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_32 - Hall_13;
+            deg_30 = (Hall_32 - Hall_13);
 #endif
 
 			i8_recent_rotor_direction = -i16_hall_order;
 			uint16_half_rotation_counter = 0;
+            if (transitions[3] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[3] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[3] = uint32_tics_filtered - uint32_tics_filtered_old;
+            uint32_tics_filtered_old = uint32_tics_filtered;
 			break;
 		case 32:
 			q31_rotorposition_hall = Hall_32;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_26 - Hall_32;
+            deg_30 = (Hall_26 - Hall_32);
 #endif
 
 			i8_recent_rotor_direction = -i16_hall_order;
+            if (transitions[4] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[4] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[4] = uint32_tics_filtered - uint32_tics_filtered_old;
+            uint32_tics_filtered_old = uint32_tics_filtered;
 			break;
 		case 26:
 			q31_rotorposition_hall = Hall_26;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_64 - Hall_26;
+            deg_30 = (Hall_64 - Hall_26);
 #endif
 
 			i8_recent_rotor_direction = -i16_hall_order;
+            if (transitions[5] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[5] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[5] = uint32_tics_filtered - uint32_tics_filtered_old;
+            uint32_tics_filtered_old = uint32_tics_filtered;
 			break;
 
 			//6 cases for reverse direction
 		case 46:
 			q31_rotorposition_hall = Hall_64;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_26 - Hall_64;
+            deg_30 = (Hall_26 - Hall_64);
 #endif
 
 			i8_recent_rotor_direction = i16_hall_order;
@@ -1964,7 +2036,7 @@ int main(void)
 		case 62:
 			q31_rotorposition_hall = Hall_26;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_32 - Hall_26;
+            deg_30 = (Hall_32 - Hall_26);
 #endif
 
 			i8_recent_rotor_direction = i16_hall_order;
@@ -1972,7 +2044,7 @@ int main(void)
 		case 23:
 			q31_rotorposition_hall = Hall_32;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_13 - Hall_32;
+            deg_30 = (Hall_13 - Hall_32);
 #endif
 
 			i8_recent_rotor_direction = i16_hall_order;
@@ -1981,7 +2053,7 @@ int main(void)
 		case 31:
 			q31_rotorposition_hall = Hall_13;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_51 - Hall_13;
+            deg_30 = (Hall_51 - Hall_13);
 #endif
 
 			i8_recent_rotor_direction = i16_hall_order;
@@ -1989,7 +2061,7 @@ int main(void)
 		case 15:
 			q31_rotorposition_hall = Hall_51;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_45 - Hall_51;
+            deg_30 = (Hall_45 - Hall_51);
 #endif
 
 			i8_recent_rotor_direction = i16_hall_order;
@@ -1997,14 +2069,14 @@ int main(void)
 		case 54:
 			q31_rotorposition_hall = Hall_45;
 #ifdef DYNAMIC_30_DEG
-            deg_30 = Hall_64 - Hall_45;
+            deg_30 = (Hall_64 - Hall_45);
 #endif
 
 			i8_recent_rotor_direction = i16_hall_order;
 			uint16_full_rotation_counter = 0;
 			break;
-
 		} // end case
+
 
 		if(MS.angle_est){
 			q31_PLL_error=q31_rotorposition_PLL-q31_rotorposition_hall;
@@ -2355,37 +2427,32 @@ int main(void)
 	}
 
 	static void set_inj_channel(char state){
+
 		switch (state)
 		{
 		case 1: //Phase C at high dutycycles, read current from phase A + B
 		{
-			ADC1->JSQR=0b00100000000000000000; //ADC1 injected reads phase A JL = 0b00, JSQ4 = 0b00100 (decimal 4 = channel 4)
-			ADC1->JOFR1 = ui16_ph1_offset;
-			ADC2->JSQR=0b00101000000000000000; //ADC2 injected reads phase B, JSQ4 = 0b00101, decimal 5
-			ADC2->JOFR1 = ui16_ph2_offset;
-
-
+                    ADC1->JSQR=0b00100000000000000000; //ADC1 injected reads phase A JL = 0b00, JSQ4 = 0b00100 (decimal 4 = channel 4)
+                    ADC1->JOFR1 = ui16_ph1_offset;
+                    ADC2->JSQR=0b00101000000000000000; //ADC2 injected reads phase B, JSQ4 = 0b00101, decimal 5
+                    ADC2->JOFR1 = ui16_ph2_offset;
 		}
 		break;
 		case 2: //Phase A at high dutycycles, read current from phase C + B
 		{
-			ADC1->JSQR=0b00110000000000000000; //ADC1 injected reads phase C, JSQ4 = 0b00110, decimal 6
-			ADC1->JOFR1 = ui16_ph3_offset;
-			ADC2->JSQR=0b00101000000000000000; //ADC2 injected reads phase B, JSQ4 = 0b00101, decimal 5
-			ADC2->JOFR1 = ui16_ph2_offset;
-
-
+                    ADC1->JSQR=0b00110000000000000000; //ADC1 injected reads phase C, JSQ4 = 0b00110, decimal 6
+                    ADC1->JOFR1 = ui16_ph3_offset;
+                    ADC2->JSQR=0b00101000000000000000; //ADC2 injected reads phase B, JSQ4 = 0b00101, decimal 5
+                    ADC2->JOFR1 = ui16_ph2_offset;
 		}
 		break;
 
 		case 3: //Phase B at high dutycycles, read current from phase A + C
 		{
-			ADC1->JSQR=0b00100000000000000000; //ADC1 injected reads phase A JL = 0b00, JSQ4 = 0b00100 (decimal 4 = channel 4)
-			ADC1->JOFR1 = ui16_ph1_offset;
-			ADC2->JSQR=0b00110000000000000000; //ADC2 injected reads phase C, JSQ4 = 0b00110, decimal 6
-			ADC2->JOFR1 = ui16_ph3_offset;
-
-
+                    ADC1->JSQR=0b00100000000000000000; //ADC1 injected reads phase A JL = 0b00, JSQ4 = 0b00100 (decimal 4 = channel 4)
+                    ADC1->JOFR1 = ui16_ph1_offset;
+                    ADC2->JSQR=0b00110000000000000000; //ADC2 injected reads phase C, JSQ4 = 0b00110, decimal 6
+                    ADC2->JOFR1 = ui16_ph3_offset;
 		}
 		break;
 
@@ -2395,12 +2462,23 @@ int main(void)
 
 	}
 	uint8_t throttle_is_set(void){
+#ifdef THROTTLE_SWITCH_AT_STARTUP
+        if(uint16_mapped_throttle > 0 && ui8_throttle_is_brake == 0)
+#else
 		if(uint16_mapped_throttle > 0)
+#endif
 		{
 			return 1;
 		}
 		else return 0;
 	}
+    uint8_t brake_is_set(void) {
+#ifdef THROTTLE_SWITCH_AT_STARTUP
+        return !HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin) || (ui8_throttle_is_brake && uint16_mapped_BRAKE > 0);
+#else
+        return !HAL_GPIO_ReadPin(Brake_GPIO_Port, Brake_Pin);
+#endif
+    }
     uint8_t pas_is_set(void) {
         return uint32_PAS != 32000;
     }
@@ -2410,15 +2488,16 @@ int main(void)
 		MS.hall_angle_detect_flag = 0; //set uq to contstant value in FOC.c for open loop control
 		q31_rotorposition_absolute = 1 << 31;
 		i16_hall_order = 1;//reset hall order
-		MS.i_d_setpoint= 200; //set MS.id to appr. 2000mA
+		MS.i_d_setpoint= 120; //set MS.id to appr. 2000mA
 		MS.i_q_setpoint= 0;
 		//	uint8_t zerocrossing = 0;
 		//	q31_t diffangle = 0;
 		HAL_Delay(5);
-		for (i = 0; i < 4320; i++) {
+		for (i = 0; i < 1080 * 6; i++) { // 
 			HAL_IWDG_Refresh(&hiwdg);
 			/* q31_rotorposition_absolute += 11930465; //drive motor in open loop with steps of 1 deg */
-			q31_rotorposition_absolute += 2386093; //drive motor in open loop with steps of 0.2 deg
+			/* q31_rotorposition_absolute += 2386093; //drive motor in open loop with steps of 0.2 deg */
+			q31_rotorposition_absolute += 994205; //drive motor in open loop with steps of 0.2 deg
 			HAL_Delay(5);
 			//printf_("%d, %d, %d, %d\n", temp3>>16,temp4>>16,temp5,temp6);
 

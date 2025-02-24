@@ -96,12 +96,24 @@
 #define USE_FIX_POSITIONS 0 //Put values from the startup message after autodetect here, if you want to use fix positions. 32bit values for the hall angles!
 #define KV 111
 #define HALL_ORDER -1
-#define HALL_45 2803630080
-#define HALL_51 3877371904 
-#define HALL_13 40501248 
-#define HALL_32 1149821184
-#define HALL_26 1486692096
-#define HALL_64 2425737984
+// #define HALL_45 2803630080
+// #define HALL_51 3877371904 
+// #define HALL_13 40501248 
+// #define HALL_32 1149821184
+// #define HALL_26 1486692096
+// #define HALL_64 2425737984
+// #define HALL_45 3746168832
+// #define HALL_51 3199795200 
+// #define HALL_13 2288320512
+// #define HALL_32 1925513216
+// #define HALL_26 1235943424
+// #define HALL_64 505806848
+#define HALL_45 4099254957
+#define HALL_51 3383427072
+#define HALL_13 2667599189
+#define HALL_32 1951771307
+#define HALL_26 1235943424
+#define HALL_64 520115541
 
 /* Note: might be unsafe but KT controller use high as brake so option to change  */
 //#define INVERT_BRAKE_SIGNAL
@@ -116,13 +128,6 @@
 /* USER CODE BEGIN Private defines */
 
 
-#ifdef INVERT_BRAKE_SIGNAL
-#define BRAKE_SIGNAL
-#else
-#define BRAKE_SIGNAL !
-#endif
-
-
 
 int32_t map (int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max);
 void autodetect();
@@ -133,6 +138,7 @@ extern uint16_t switchtime[3];
 extern uint32_t ui32_tim1_counter;
 extern uint32_t uint32_PAS_counter;
 extern uint8_t throttle_is_set(void);
+extern uint8_t brake_is_set(void);
 extern uint8_t pas_is_set(void);
 extern uint8_t pas_msb(void);
 extern void UART_IdleItCallback(void);
@@ -205,6 +211,7 @@ typedef struct
 	int32_t       	battery_current_max;
     q31_t           tics_lower_limit;
     q31_t           tics_higher_limit;
+    uint32_t        regen_current;
 
 }MotorParams_t;
 
