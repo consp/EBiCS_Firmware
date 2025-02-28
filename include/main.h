@@ -115,6 +115,11 @@
 #define HALL_26 1235943424
 #define HALL_64 520115541
 
+#define CONTROLLER_TEMPERATURE_THRESHOLD 70
+#define CONTROLLER_TEMPERATURE_MAX       80
+#define MOTOR_TEMPERATURE_THRESHOLD 100
+#define MOTOR_TEMPERATURE_MAX       130
+
 /* Note: might be unsafe but KT controller use high as brake so option to change  */
 //#define INVERT_BRAKE_SIGNAL
 

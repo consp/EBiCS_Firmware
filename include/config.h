@@ -8,13 +8,15 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 #include "stdint.h"
-#define DISPLAY_TYPE_EBiCS (1<<5)  
-#define DISPLAY_TYPE_KINGMETER_618U (1<<4)                  // King-Meter 618U protocol (KM5s, EBS-LCD2, J-LCD, SW-LCD)
-#define DISPLAY_TYPE_KINGMETER_901U (1<<8)                  // King-Meter 901U protocol (KM5s)
+#define DISPLAY_TYPE_EBiCS (1<<0)  
+#define DISPLAY_TYPE_BAFANG_LCD (1<<1)						// For 'Blaupunkt' Display of Prophete Entdecker
+#define DISPLAY_TYPE_BAFANG_850_860 (1<<2)                  // 850 and 860 LCDs can do 9k6 baud, also support 1200 baud, detection at startup
+#define DISPLAY_TYPE_BAFANG (DISPLAY_TYPE_BAFANG_LCD|DISPLAY_TYPE_BAFANG_850_860)
+#define DISPLAY_TYPE_KINGMETER_618U (1<<3)                  // King-Meter 618U protocol (KM5s, EBS-LCD2, J-LCD, SW-LCD)
+#define DISPLAY_TYPE_KINGMETER_901U (1<<4)                  // King-Meter 901U protocol (KM5s)
 #define DISPLAY_TYPE_KINGMETER      (DISPLAY_TYPE_KINGMETER_618U|DISPLAY_TYPE_KINGMETER_901U)
-#define DISPLAY_TYPE_BAFANG (1<<2)							// For 'Blaupunkt' Display of Prophete Entdecker
-#define DISPLAY_TYPE_KUNTENG (1<<1)							// For ASCII-Output in Debug mode
-#define DISPLAY_TYPE_DEBUG (1<<0)							// For ASCII-Output in Debug mode);
+#define DISPLAY_TYPE_KUNTENG (1<<5)							// For ASCII-Output in Debug mode
+#define DISPLAY_TYPE_DEBUG (1<<6)							// For ASCII-Output in Debug mode);
 #define EXTERNAL 1
 #define INTERNAL 0
 
@@ -94,8 +96,8 @@
 // #define DISPLAY_TYPE DISPLAY_TYPE_DEBUG //ASCII Printout for debugging
 // #define DISPLAY_TYPE DISPLAY_TYPE_KINGMETER_901U
 // #define DISPLAY_TYPE DISPLAY_TYPE_KINGMETER_618U
-#define DISPLAY_TYPE DISPLAY_TYPE_KUNTENG
-// #define DISPLAY_TYPE DISPLAY_TYPE_BAFANG
+// #define DISPLAY_TYPE DISPLAY_TYPE_KUNTENG
+#define DISPLAY_TYPE DISPLAY_TYPE_BAFANG_850_860
 #define SPEED_PLL 1 // not needed
 #define SPEEDSOURCE INTERNAL
 #define AUTODETECT 0
