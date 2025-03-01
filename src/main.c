@@ -192,7 +192,19 @@ int16_t i16_sinus=0;
 int16_t i16_cosinus=0;
 char buffer[100];
 char char_dyn_adc_state_old=1;
-const uint8_t assist_factor[10]={0, 51, 102, 153, 204, 255, 255, 255, 255, 255};
+/* const uint8_t assist_factor[10]={0, 51, 102, 153, 204, 255, 255, 255, 255, 255}; */
+const uint8_t assist_factor[10]={ // note -> 1 is my default as the bafan display does not remember the setting
+    0,
+    192,
+    31,
+    63,
+    95,
+    127,
+    159,
+    191,
+    223,
+    255
+};
 const uint8_t assist_profile[2][6]= {	{0,10,20,30,45,48},
 		{64,64,128,200,255,0}};
 
@@ -378,7 +390,7 @@ int main(void)
 
 
 	MP.pulses_per_revolution = PULSES_PER_REVOLUTION;
-	MP.wheel_cirumference = WHEEL_CIRCUMFERENCE;
+	MP.wheel_circumference = WHEEL_CIRCUMFERENCE;
 	MP.speedLimit=SPEEDLIMIT;
 	MP.battery_current_max = BATTERYCURRENT_MAX;
     MP.regen_current = REGEN_CURRENT;
@@ -573,7 +585,7 @@ int main(void)
 		HAL_IWDG_Refresh(&hiwdg);
 		HAL_Delay(200);
 		y++;
-		if(y==25) ui8_throttle_is_brake = 0;
+		if(y>=15) ui8_throttle_is_brake = 0;
 	}
 #endif
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
@@ -884,7 +896,7 @@ int main(void)
 #else		// torque-simulation mode with throttle override
 
 #if (DISPLAY_TYPE & DISPLAY_TYPE_BAFANG)
-				uint16_mapped_PAS = map(uint32_PAS, RAMP_END, PAS_TIMEOUT, (PH_CURRENT_MAX*(int32_t)(assist_factor[MS.assist_level]))>>8, 0); // level in range 0...5
+				uint16_mapped_PAS = map(uint32_PAS, RAMP_END, PAS_TIMEOUT, (PH_CURRENT_MAX*(int32_t)(assist_factor[MS.assist_level]))>>8, 0); // level in range 0...9
 #endif
 
 #if (DISPLAY_TYPE == DISPLAY_TYPE_KUNTENG)
@@ -1617,11 +1629,14 @@ int main(void)
 
 		huart1.Instance = USART1;
 
-#if ((DISPLAY_TYPE & DISPLAY_TYPE_KINGMETER) ||DISPLAY_TYPE==DISPLAY_TYPE_KUNTENG||DISPLAY_TYPE==DISPLAY_TYPE_EBiCS||DISPLAY_TYPE==DISPLAY_TYPE_NO2 || DISPLA_TYPE==DISPLAY_TYPE_BAFANG_850_860)
-		huart1.Init.BaudRate = 9600;
+#if ((DISPLAY_TYPE & DISPLAY_TYPE_KINGMETER) ||DISPLAY_TYPE==DISPLAY_TYPE_KUNTENG||DISPLAY_TYPE==DISPLAY_TYPE_EBiCS||DISPLAY_TYPE==DISPLAY_TYPE_NO2 || DISPLAY_TYPE==DISPLAY_TYPE_BAFANG_850_860)
+#pragma message("Baudrate 9k6")
+		huart1.Init.BaudRate = 1200;
 #elif (DISPLAY_TYPE == DISPLAY_TYPE_BAFANG_LCD)
+#pragma message("Baudrate 1k2")
 		huart1.Init.BaudRate = 1200; 
 #else
+#pragma message("Baudrate 56k")
 		huart1.Init.BaudRate = 56000;
 #endif
 
@@ -1971,8 +1986,8 @@ int main(void)
 #endif
 			i8_recent_rotor_direction = -i16_hall_order;
 			uint16_full_rotation_counter = 0;
-            if (transitions[0] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[0] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[0] = uint32_tics_filtered - uint32_tics_filtered_old;
-            uint32_tics_filtered_old = uint32_tics_filtered;
+            /* if (transitions[0] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[0] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[0] = uint32_tics_filtered - uint32_tics_filtered_old; */
+            /* uint32_tics_filtered_old = uint32_tics_filtered; */
 			break;
 		case 45:
 			q31_rotorposition_hall = Hall_45;
@@ -1980,8 +1995,8 @@ int main(void)
             deg_30 = (Hall_51 - Hall_45);
 #endif
 			i8_recent_rotor_direction = -i16_hall_order;
-            if (transitions[1] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[1] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[1] = uint32_tics_filtered - uint32_tics_filtered_old;
-            uint32_tics_filtered_old = uint32_tics_filtered;
+            /* if (transitions[1] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[1] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[1] = uint32_tics_filtered - uint32_tics_filtered_old; */
+            /* uint32_tics_filtered_old = uint32_tics_filtered; */
 			break;
 		case 51:
 			q31_rotorposition_hall = Hall_51;
@@ -1989,8 +2004,8 @@ int main(void)
             deg_30 = (Hall_13 - Hall_51);
 #endif
 			i8_recent_rotor_direction = -i16_hall_order;
-            if (transitions[2] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[2] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[2] = uint32_tics_filtered - uint32_tics_filtered_old;
-            uint32_tics_filtered_old = uint32_tics_filtered;
+            /* if (transitions[2] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[2] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[2] = uint32_tics_filtered - uint32_tics_filtered_old; */
+            /* uint32_tics_filtered_old = uint32_tics_filtered; */
 			break;
 		case 13:
 			q31_rotorposition_hall = Hall_13;
@@ -2000,8 +2015,8 @@ int main(void)
 
 			i8_recent_rotor_direction = -i16_hall_order;
 			uint16_half_rotation_counter = 0;
-            if (transitions[3] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[3] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[3] = uint32_tics_filtered - uint32_tics_filtered_old;
-            uint32_tics_filtered_old = uint32_tics_filtered;
+            /* if (transitions[3] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[3] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[3] = uint32_tics_filtered - uint32_tics_filtered_old; */
+            /* uint32_tics_filtered_old = uint32_tics_filtered; */
 			break;
 		case 32:
 			q31_rotorposition_hall = Hall_32;
@@ -2010,8 +2025,8 @@ int main(void)
 #endif
 
 			i8_recent_rotor_direction = -i16_hall_order;
-            if (transitions[4] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[4] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[4] = uint32_tics_filtered - uint32_tics_filtered_old;
-            uint32_tics_filtered_old = uint32_tics_filtered;
+            /* if (transitions[4] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[4] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[4] = uint32_tics_filtered - uint32_tics_filtered_old; */
+            /* uint32_tics_filtered_old = uint32_tics_filtered; */
 			break;
 		case 26:
 			q31_rotorposition_hall = Hall_26;
@@ -2020,8 +2035,8 @@ int main(void)
 #endif
 
 			i8_recent_rotor_direction = -i16_hall_order;
-            if (transitions[5] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[5] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[5] = uint32_tics_filtered - uint32_tics_filtered_old;
-            uint32_tics_filtered_old = uint32_tics_filtered;
+            /* if (transitions[5] * 0.9 > uint32_tics_filtered - uint32_tics_filtered_old || transitions[5] * 1.1 < uint32_tics_filtered - uint32_tics_filtered_old) transitions[5] = uint32_tics_filtered - uint32_tics_filtered_old; */
+            /* uint32_tics_filtered_old = uint32_tics_filtered; */
 			break;
 
 			//6 cases for reverse direction
@@ -2341,9 +2356,12 @@ int main(void)
 		else BF.Tx.Speed = 0;
 
 #else
-		if(__HAL_TIM_GET_COUNTER(&htim2) < 12000 && MS.system_state != Stop)
+		if(__HAL_TIM_GET_COUNTER(&htim2) < 12000)
 		{
-			BF.Tx.Speed =(internal_tics_to_speedx100(MS.Speed)*20)>>8; //factor is *20/256, found empiric
+            // BF.Tx.Wheeldiameter in cm
+            // BF.Tx.Speed == RPM
+			BF.Tx.Speed = 60000000/(6*20*MS.Speed); // since speed is time and it expects RPM we can ignore the actual speed
+                //(internal_tics_to_speedx100(MS.Speed)*20)>>8; //factor is *20/256, found empiric
 
 		}
 		else
@@ -2357,7 +2375,7 @@ int main(void)
 
 
 		/* Receive Rx parameters/settings and send Tx parameters */
-		Bafang_Service(&BF,1, &MS);
+		Bafang_Service(&BF,1, &MS, &MP);
 
 
 
@@ -2629,19 +2647,19 @@ int main(void)
 	}
 
 	int32_t speed_to_tics (uint8_t speed){
-		return WHEEL_CIRCUMFERENCE*5*3600/(6*ui8_gear_ratio*speed*10);
+		return MP.wheel_circumference*5*3600/(6*ui8_gear_ratio*speed*10);
 	}
 
 	inline int8_t tics_to_speed (uint32_t tics){
-		return WHEEL_CIRCUMFERENCE*5*3600/(6*ui8_gear_ratio*tics*10);
+		return MP.wheel_circumference*5*3600/(6*ui8_gear_ratio*tics*10);
 	}
 
 	inline int16_t internal_tics_to_speedx100 (uint32_t tics){
-		return WHEEL_CIRCUMFERENCE*50*3600/(6*ui8_gear_ratio*tics);
+		return MP.wheel_circumference*50*3600/(6*ui8_gear_ratio*tics);
 	}
 
 	inline int16_t external_tics_to_speedx100 (uint32_t tics){
-		return WHEEL_CIRCUMFERENCE*8*360/(PULSES_PER_REVOLUTION*tics);
+		return MP.wheel_circumference*8*360/(PULSES_PER_REVOLUTION*tics);
 	}
 
 	inline void runPIcontrol(){

@@ -34,6 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RXSTATE_INFO        3 //info startcode received, waiting for info code
 #define RXSTATE_INFOMESSAGE 4 //info code received, waiting for info message
 #define RXSTATE_DONE        5 //command received
+                              //
 
 extern UART_HandleTypeDef huart1;
 
@@ -80,7 +81,7 @@ void Bafang_Init (BAFANG_t* BF_ctx)
  * Bafang_Service() - Communicates data from and to the display
  *
  ***************************************************************************************************/
-void Bafang_Service(BAFANG_t* BF_ctx, uint8_t  rx, MotorState_t *MS)
+void Bafang_Service(BAFANG_t* BF_ctx, uint8_t  rx, MotorState_t *MS, MotorParams_t *MP)
 {
     static uint8_t  last_pointer_position;
     static uint8_t  recent_pointer_position;
@@ -104,21 +105,14 @@ void Bafang_Service(BAFANG_t* BF_ctx, uint8_t  rx, MotorState_t *MS)
 
     if(recent_pointer_position>last_pointer_position){
     	Rx_message_length=recent_pointer_position-last_pointer_position;
-    	//printf_("groesser %d, %d, %d \n ",recent_pointer_position,last_pointer_position, Rx_message_length);
-    	//HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
     	memcpy(BF_Message,BF_ctx->RxBuff+last_pointer_position,Rx_message_length);
-    	//HAL_UART_Transmit(&huart3, (uint8_t *)&BF_Message, Rx_message_length,50);
 	}
     else {
     	Rx_message_length=recent_pointer_position+64-last_pointer_position;
      	memcpy(BF_Message,BF_ctx->RxBuff+last_pointer_position,64-last_pointer_position);
         memcpy(BF_Message+64-last_pointer_position,BF_ctx->RxBuff,recent_pointer_position);
-      //  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-
-
     }
     last_pointer_position=recent_pointer_position;
-   // HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&BF_Message, Rx_message_length);
     
 
           uint8_t status = BF_STATUS_NORMAL;
@@ -245,19 +239,23 @@ void Bafang_Service(BAFANG_t* BF_ctx, uint8_t  rx, MotorState_t *MS)
               BF_ctx->Rx.PushAssist=1;
               break;
               default:
-              BF_ctx->Rx.AssistLevel=0;
-              break;
+                BF_ctx->Rx.AssistLevel=0;
+                break;
             }
           }
           break;
           
           case BF_CMD_LIGHT:
-          BF_ctx->Rx.Headlight=(BF_Message[2]==BF_LIGHTON);
+            BF_ctx->Rx.Headlight=(BF_Message[2]==BF_LIGHTON);
           break;
           
-          case BF_CMD_WHEELDIAM:
-          BF_ctx->Rx.Wheeldiameter=BF_Message[2]*256+BF_Message[3];
-          break;
+          case BF_CMD_SPEEDLIMIT:
+            // value is diameter * value = meter/minute and is the given speed limit
+            // Convert to Meter/Hour, then round to nearest km/h
+            BF_ctx->Rx.SpeedLimit = ((BF_Message[2] << 8)+  BF_Message[3]);
+            BF_ctx->Rx.SpeedLimit = (BF_ctx->Rx.SpeedLimit * MP->wheel_circumference * 252) >> 22; // error is 0.001%, good enough and no division
+            MP->speedLimit = BF_ctx->Rx.SpeedLimit;
+            break;
 #ifdef DEBUG
           default:
             BF_ctx->last_commands[BF_ctx->last_command] = BF_Message[1];

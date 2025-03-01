@@ -39,17 +39,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // read commands
 #define BF_CMD_GETSTATUS        0x08
 #define BF_CMD_GETPOWER         0x0A
-#define BF_CMD_LEVEL            0x0B
 #define BF_CMD_GETBAT           0x11
-#define BF_CMD_LIGHT            0x1A
 #define BF_CMD_GETSPEED         0x20
-#define BF_CMD_UNKNOWN          0x20
+#define BF_CMD_UNKNOWN          0x21
 #define BF_CMD_GETRANGE         0x22    
 #define BF_CMD_GETCAL           0x24    
 #define BF_CMD_UNKNOWN2         0x25
 #define BF_CMD_GET2             0x31
 // write commands
-#define BF_CMD_WHEELDIAM        0x1F
+#define BF_CMD_LIGHT            0x1A
+#define BF_CMD_LEVEL            0x0B
+#define BF_CMD_SPEEDLIMIT       0x1F
 
 // status codes
 #define BF_STATUS_NORMAL               0x01
@@ -57,26 +57,32 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define BF_STATUS_CONTROLLER_OVERTEMP  0x10
 #define BF_STATUS_MOTOR_OVERTEMP       0x11
 
-#define BF_LIGHTON 241
+#define BF_LIGHTON 0xF1
 
 #define BF_MAX_RXBUFF 64
 #define BF_MAX_TXBUFF 4
 
+/*
+ * levels depend on setting on display
+ * if set to 3, only levels 3, 5 and 9 are used
+ * if set to 5, only 2, 4, 6, 8 and 9 are used
+ * if set to 9 all are used
+ */
 #define BF_LEVEL0 0
-#define BF_LEVEL1 11 //1
-#define BF_LEVEL2 13 //11
-#define BF_LEVEL3 21 //12
-#define BF_LEVEL4 23 //13
-#define BF_LEVEL5 3  //2
-#define BF_LEVEL6 27 //21
-#define BF_LEVEL7 28//22
-#define BF_LEVEL8 29 //23
-#define BF_LEVEL9 30 //3
-#define BF_PUSHASSIST 6
+#define BF_LEVEL1 0x01
+#define BF_LEVEL2 0x0B
+#define BF_LEVEL3 0x0C
+#define BF_LEVEL4 0x0D
+#define BF_LEVEL5 0x02
+#define BF_LEVEL6 0x15
+#define BF_LEVEL7 0x16
+#define BF_LEVEL8 0x17
+#define BF_LEVEL9 0x03
+#define BF_PUSHASSIST 0x06
 
 #define BF_DISPLAYTIMEOUT 160
 
-#define DEBUG 1
+// #define DEBUG 1
 
 typedef struct
 {
@@ -85,6 +91,7 @@ typedef struct
     uint8_t  Headlight;                 // BF_HEADLIGHT_OFF / BF_HEADLIGHT_ON
     uint8_t  PushAssist;                // BF_PUSHASSIST_OFF / BF_PUSHASSIST_ON
     uint16_t Wheeldiameter;             // Wheel Diameter
+    uint16_t SpeedLimit;
 }RX_PARAM_t;
 
 typedef struct
@@ -132,7 +139,7 @@ typedef struct
 void Bafang_Init (BAFANG_t* BF_ctx);
 
 
-void Bafang_Service(BAFANG_t* BF_ctx, uint8_t  rx, MotorState_t *MS);
+void Bafang_Service(BAFANG_t* BF_ctx, uint8_t  rx, MotorState_t *MS, MotorParams_t *MP);
 
 
 

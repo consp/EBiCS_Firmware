@@ -199,7 +199,7 @@ typedef struct
 typedef struct
 {
 
-	uint16_t       	wheel_cirumference;
+	uint16_t       	wheel_circumference;
 	uint16_t       	p_Iq;
 	uint16_t       	i_Iq;
 	uint16_t       	p_Id;

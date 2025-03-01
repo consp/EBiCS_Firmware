@@ -29,7 +29,8 @@
 #define CAL_V 15LL<<8
 // #define CAL_I 13LL<<8
 // #define CAL_I 38LL<<8
-#define CAL_I 106LL<<8
+// #define CAL_I 106LL<<8
+#define CAL_I 83LL<<8
 
 #define INDUCTANCE 6
 #define RESISTANCE 40
@@ -77,16 +78,16 @@
 #define PUSHASSIST_CURRENT 65
 
 // wheel
-#define WHEEL_CIRCUMFERENCE 2200
+#define WHEEL_CIRCUMFERENCE 2164
 // gear ratio, magnets/2
 #define GEAR_RATIO 10
 // speed limit in kph
 #define SPEEDLIMIT 30
 #define PULSES_PER_REVOLUTION 1
 // max phase current
-#define PH_CURRENT_MAX 188 // ~ 20A
-#define BATTERYCURRENT_MAX 12000
-#define REGEN_CURRENT 46 // ~ 5A
+#define PH_CURRENT_MAX 240 // ~ 20A
+#define BATTERYCURRENT_MAX 15000
+#define REGEN_CURRENT 96 // ~ 8A
 #define REGEN_CURRENT_MAX 10000 // My BMS limit
 // voltage, see cal
 #define VOLTAGE_MIN 820
@@ -105,11 +106,10 @@
 #define THROTTLE_OVERRIDE
 
 /* LCD8 Settings */
-#define ALLOW_DYNAMIC_CURRENT                // Uncomment to allow P5 to controll the max battery current
-#define ALLOW_DYNAMIC_REVERSE                // Uncomment to allow C2 to change the direction of rotation
-#define ALLOW_DYNAMIC_REGEN                  // Uncomment to allow C5 to set regen current in A
+// #define ALLOW_DYNAMIC_CURRENT                // Uncomment to allow P5 to controll the max battery current
+// #define ALLOW_DYNAMIC_REVERSE                // Uncomment to allow C2 to change the direction of rotation
+// #define ALLOW_DYNAMIC_REGEN                  // Uncomment to allow C5 to set regen current in A
 #define BRAKELIGHT_IS_BACKLIGHT              // Uncomment to use the brakelight signal/port for the backlight
-
 #define THROTTLE_SWITCH_AT_STARTUP
 
 #endif /* CONFIG_H_ */
